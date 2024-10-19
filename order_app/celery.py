@@ -2,9 +2,9 @@ from __future__ import absolute_import, unicode_literals
 import os
 from celery import Celery
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Azonix.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'SilverShop.settings')
 
-app = Celery('Azonix')
+app = Celery('SilverShop')
 
 app.config_from_object('django.conf:settings', namespace='CELERY')
 

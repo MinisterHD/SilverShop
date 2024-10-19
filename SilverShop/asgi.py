@@ -6,7 +6,7 @@ from channels.auth import AuthMiddlewareStack
 from channels.security.websocket import AllowedHostsOriginValidator
 from chat_app.routing import websocket_urlpatterns
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Azonix.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'SilverShop.settings')
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
