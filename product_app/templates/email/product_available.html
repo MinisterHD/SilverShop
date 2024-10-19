@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Product Available</title>
+</head>
+<body>
+    <h1>Hello {{ user.username }},</h1>
+    <p>The product <strong>{{ product.name }}</strong> is now available!</p>
+    <p>Click <a href="{% url 'product-detail' product.id %}">here</a> to view the product.</p>
+    <p>Thank you for using our service!</p>
+</body>
+</html>
