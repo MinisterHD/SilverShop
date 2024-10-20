@@ -3,21 +3,46 @@ import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.exceptions import DenyConnection
 from channels.db import database_sync_to_async
-
+import time
 logger = logging.getLogger(__name__)
 
 class ChatConsumer(AsyncWebsocketConsumer):
+    from collections import defaultdict
+    
+    connection_timestamps = defaultdict(list)
+
     async def connect(self):
         from rest_framework_simplejwt.tokens import UntypedToken
         from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
         logger.info("WebSocket connection attempt")
 
+        # Rate limiting
+        user_ip = self.scope['client'][0]
+        current_time = time.time()
+        self.connection_timestamps[user_ip] = [
+            timestamp for timestamp in self.connection_timestamps[user_ip]
+            if current_time - timestamp < 60  # Keep only the timestamps within the last minute
+        ]
 
-        token = self.scope['query_string'].decode().split('=')[1]
+        if len(self.connection_timestamps[user_ip]) >= 10:
+            logger.error("Rate limit exceeded")
+            await self.close()
+            raise DenyConnection("Rate limit exceeded")
+
+        self.connection_timestamps[user_ip].append(current_time)
+
+        # Token validation
+        query_string = self.scope['query_string'].decode()
+        logger.info(f"Query string: {query_string}")
+        token = query_string.split('=')[1] if '=' in query_string else None
+
+        if not token:
+            logger.error("Token not found in query string")
+            await self.close()
+            raise DenyConnection("Token not found in query string")
 
         try:
-
             untoken = UntypedToken(token)
             user_id = untoken['user_id']
             self.scope['user'] = await self.get_user(user_id)
@@ -27,25 +52,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.close()
             raise DenyConnection(f"Token error: {e}")
 
-
+        # User authentication
         if not self.scope["user"] or not self.scope["user"].is_authenticated:
             logger.error("User is not authenticated")
             await self.close()
             raise DenyConnection("User is not authenticated")
 
- 
+        # Room setup
         other_user_id = self.scope['url_route']['kwargs']['other_user_id']
-
-
         self.room_name = f'chat_{min(user_id, other_user_id)}_{max(user_id, other_user_id)}'
         self.room_group_name = f'chat_{self.room_name}'
-
 
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
         )
 
+        # Accept connection
         await self.accept()
         logger.info("WebSocket connection accepted")
 

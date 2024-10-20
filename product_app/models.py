@@ -2,10 +2,7 @@ from django.db import models
 from user_app.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from parler.models import TranslatableModel, TranslatedFields
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
-from django.dispatch import receiver
-from django.apps import apps
+
 
 class Category(TranslatableModel):
     translations = TranslatedFields(
@@ -65,7 +62,6 @@ class Product(TranslatableModel):
 
     def __str__(self):
         return self.name
-
 
 class Comment(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='comments',null=False,blank=False)
