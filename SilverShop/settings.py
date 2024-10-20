@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
+from decouple import config
 
 from pathlib import Path
 
@@ -20,12 +21,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-2a@+-nld=!m#ek)@cj$i6%v99f=6=+(ke(73rhcnh5jvcs@c%m'
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
 
+SECRET_KEY = config('SECRET_KEY')
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 
 # Application definition
@@ -93,17 +95,18 @@ ASGI_APPLICATION = 'SilverShop.asgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'SilverShop',  
-        'USER': 'admin-silvershop',  
-        'PASSWORD': 'admin',  
-        'HOST': 'localhost', 
-        'PORT': '5432', 
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
-
 
 
 
@@ -179,10 +182,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 from datetime import timedelta
 
+
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    }
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('JWT_ACCESS_TOKEN_LIFETIME', default=10, cast=int)),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=config('JWT_REFRESH_TOKEN_LIFETIME', default=7, cast=int)),
+}
+
 PARLER_LANGUAGES = {
     None: (
         {'code': 'en'},
@@ -220,24 +225,24 @@ LOGGING = {
     'disable_existing_loggers': False,
     'handlers': {
         'file': {
-            'level': 'DEBUG',
+            'level': config('LOGGING_LEVEL', default='DEBUG'),  # Default to DEBUG
             'class': 'logging.FileHandler',
-            'filename': r'C:\Projects\Silver-Shop\logfile.log', 
+            'filename': config('LOGGING_FILE_PATH', default=os.path.join(BASE_DIR, 'logfile.log')),  # Default to BASE_DIR/logfile.log
         },
         'console': {
-            'level': 'DEBUG',
+            'level': config('LOGGING_LEVEL', default='DEBUG'),  # Default to DEBUG
             'class': 'logging.StreamHandler',
         },
     },
     'loggers': {
         'django': {
-            'handlers': ['file', 'console'], 
-            'level': 'DEBUG',
+            'handlers': ['file', 'console'],
+            'level': config('LOGGING_LEVEL', default='DEBUG'),  # Default to DEBUG
             'propagate': True,
         },
-        'chat_app': {  
-            'handlers': ['file', 'console'], 
-            'level': 'DEBUG',
+        'chat_app': {
+            'handlers': ['file', 'console'],
+            'level': config('LOGGING_LEVEL', default='DEBUG'),  # Default to DEBUG
             'propagate': True,
         },
     },
@@ -255,7 +260,7 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': 86400, 
     },
 }
-# Allow all origins (not recommended for production)
+
 CORS_ALLOW_ALL_ORIGINS = True
 
 # OR specify allowed origins (recommended for production)
