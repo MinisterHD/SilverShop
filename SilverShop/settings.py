@@ -184,6 +184,11 @@ from datetime import timedelta
 
 
 SIMPLE_JWT = {
+    'AUTH_COOKIE': 'access_token',  
+    'AUTH_COOKIE_SECURE': True,     
+    'AUTH_COOKIE_HTTP_ONLY': True,  
+    'AUTH_COOKIE_PATH': '/',        
+    'AUTH_COOKIE_SAMESITE': 'Lax',
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('JWT_ACCESS_TOKEN_LIFETIME', default=10, cast=int)),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=config('JWT_REFRESH_TOKEN_LIFETIME', default=7, cast=int)),
 }
@@ -198,9 +203,6 @@ PARLER_LANGUAGES = {
         'hide_untranslated': False, 
     }
 }
-
-
-
 
 
 ALLOWED_HOSTS = ['*']

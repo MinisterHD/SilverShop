@@ -11,12 +11,14 @@ from rest_framework.exceptions import ValidationError, PermissionDenied, NotFoun
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
 from django.utils.translation import gettext_lazy as _
 import logging
 from .permissions import IsOwnerOrAdmin
-from rest_framework.generics import CreateAPIView, GenericAPIView  # Add these imports
-
+from rest_framework.generics import CreateAPIView
 logger = logging.getLogger(__name__)
+
+
 # Auth
 class SignUpView(CreateAPIView):
     serializer_class = UserSignUpSerializer
@@ -53,7 +55,7 @@ class SignUpView(CreateAPIView):
             logger.error(f"Error during sign up: {str(e)}")
             return Response({'errors': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class LoginView(GenericAPIView):
+class LoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     parser_classes = [JSONParser]
 
@@ -61,7 +63,22 @@ class LoginView(GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
-            return Response(serializer.validated_data, status=status.HTTP_200_OK)
+            response = Response(serializer.validated_data, status=status.HTTP_200_OK)
+            response.set_cookie(
+                key='access_token',
+                value=serializer.validated_data['token']['access'],
+                httponly=True,
+                secure=True,
+                samesite='Lax'
+            )
+            response.set_cookie(
+                key='refresh_token',
+                value=serializer.validated_data['token']['refresh'],
+                httponly=True,
+                secure=True,
+                samesite='Lax'
+            )
+            return response
 
         except ValidationError as e:
             return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
