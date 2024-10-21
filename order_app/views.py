@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.parsers import JSONParser
-from django_filters.rest_framework import DjangoFilterBackend
 from .models import *
 from .serializers import OrderSerializer, CartSerializer,WishlistSerializer
 from product_app.models import Product
@@ -16,7 +15,6 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
 from django.utils import timezone
 logger = logging.getLogger(__name__)
-
 
 class CustomPageNumberPagination(PageNumberPagination):
     page_size_query_param = 'page_size'
@@ -31,23 +29,36 @@ class CustomPageNumberPagination(PageNumberPagination):
         })
 
 #Order
+
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrAdmin]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['delivery_status', 'order_date', 'user']
     ordering_fields = ['delivery_date', 'order_date']
     ordering = ['-order_date']
     pagination_class = CustomPageNumberPagination
 
     def get_queryset(self):
         queryset = super().get_queryset().prefetch_related('order_items__product')
-        user_id = self.request.query_params.get('user_id')
+        params = self.request.query_params
+
+        user_id = params.get('user_id')
         if user_id:
             queryset = queryset.filter(user_id=user_id)
+
+        delivery_status = params.get('delivery_status')
+        if delivery_status:
+            queryset = queryset.filter(delivery_status=delivery_status)
+
+        order_date = params.get('order_date')
+        if order_date:
+            queryset = queryset.filter(order_date=order_date)
+
+        ordering = params.get('ordering', '-order_date')
+        queryset = queryset.order_by(ordering)
+
         return queryset
 
     def perform_create(self, serializer):
@@ -198,11 +209,23 @@ class WishlistViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrAdmin]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['user__username']
     search_fields = ['user__username']
     ordering_fields = ['user__username']
     ordering = ['user__username']
+    pagination_class = CustomPageNumberPagination
+
+    def get_queryset(self):
+        queryset = super().get_queryset().prefetch_related('wishlist_items__product')
+        params = self.request.query_params
+
+        user_username = params.get('user__username')
+        if user_username:
+            queryset = queryset.filter(user__username__icontains=user_username)
+
+        ordering = params.get('ordering', 'user__username')
+        queryset = queryset.order_by(ordering)
+
+        return queryset
 
     def get_object(self):
         user_id = self.kwargs.get('user_id')
@@ -269,7 +292,6 @@ class WishlistViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error listing wishlists: {str(e)}")
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    permission_classes = [IsOwnerOrAdmin]
 
     def delete(self, request, *args, **kwargs):
         user_id = self.kwargs.get('user_id')

@@ -3,7 +3,7 @@ from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
-from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
@@ -14,8 +14,6 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
     from .models import Message 
     queryset = Message.objects.all()  
     pagination_class = ChatMessagePagination
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['sender', 'receiver', 'timestamp']
 
     def get_serializer_class(self):
         from .serializers import ChatMessageSerializer  
@@ -32,7 +30,20 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
+        queryset = self.get_queryset()
+        params = request.query_params
+
+        sender = params.get('sender')
+        receiver = params.get('receiver')
+        timestamp = params.get('timestamp')
+
+        if sender:
+            queryset = queryset.filter(sender=sender)
+        if receiver:
+            queryset = queryset.filter(receiver=receiver)
+        if timestamp:
+            queryset = queryset.filter(timestamp=timestamp)
+
         page = self.paginate_queryset(queryset)
         serializer_class = self.get_serializer_class()
         if page is not None:

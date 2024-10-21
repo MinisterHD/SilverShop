@@ -4,7 +4,6 @@ from .models import *
 from .serializers import *
 from .permissions import *
 from django.http import Http404
-from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework import generics
@@ -141,7 +140,6 @@ class ProductViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
     parser_classes = [MultiPartParser, JSONParser]
     pagination_class = ProductPagination
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ['name']
     lookup_url_kwarg = 'product_id'
 
@@ -289,8 +287,10 @@ class RatingViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrAdmin]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['product', 'user']
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['product__name', 'user__username']
+    ordering_fields = ['product', 'user']
+    ordering = ['product']
     lookup_url_kwarg = 'rating_id'
 
     def get_serializer_class(self):
@@ -352,7 +352,7 @@ class RatingViewSet(viewsets.ModelViewSet):
         except Http404:
             return Response({'error': 'Rating not found.'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({'error': f'An error occurred while deleting the rating: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)       
+            return Response({'error': f'An error occurred while deleting the rating: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
 
 #TopSellerProducts
 class TopSellerAPIView(ListAPIView):

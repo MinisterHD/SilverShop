@@ -47,7 +47,6 @@ INSTALLED_APPS = [
     'product_app.apps.ProductAppConfig',
     'order_app',
     'chat_app',
-    'django_filters',
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
@@ -162,7 +161,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
         'DEFAULT_FILTER_BACKENDS': [
-        'django_filters.rest_framework.DjangoFilterBackend', 'rest_framework.filters.SearchFilter'],   
+      'rest_framework.filters.SearchFilter'],   
         'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.TokenAuthentication',
@@ -210,7 +209,7 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [('127.0.0.1', 6379)],
+            "hosts": [config('REDIS_URL', default='redis://redis:6379')],
         },
     },
 }
@@ -254,12 +253,12 @@ LOGGING = {
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 
-CELERY_BROKER_URL = 'redis://localhost:6379'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+CELERY_BROKER_URL = config('REDIS_URL', default='redis://redis:6379')
+CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://redis:6379')
 CELERY_BEAT_SCHEDULE = {
     'update_delivery_status': {
         'task': 'order_app.tasks.update_delivery_status',
-        'schedule': 86400, 
+        'schedule': 86400,
     },
 }
 
