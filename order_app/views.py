@@ -145,7 +145,7 @@ class CartViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=True, methods=['get'], url_path='item/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['get'], url_path='view-item/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
     def retrieve_cart_item(self, request, pk=None, product_id=None):
         try:
             cart_item = CartItem.objects.get(cart__user_id=pk, product_id=product_id)
@@ -156,7 +156,7 @@ class CartViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=True, methods=['put', 'patch'], url_path='item/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['put', 'patch'], url_path='update-item/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
     def update_cart_item(self, request, pk=None, product_id=None):
         try:
             cart_item = CartItem.objects.get(cart__user_id=pk, product_id=product_id)
@@ -175,7 +175,7 @@ class CartViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=True, methods=['delete'], url_path='item/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['delete'], url_path='remove-item/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
     def delete_cart_item(self, request, pk=None, product_id=None):
         try:
             cart_item = CartItem.objects.get(cart__user_id=pk, product_id=product_id)
@@ -191,7 +191,7 @@ class CartViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=True, methods=['get'], url_path='', permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['get'], url_path='view-cart', permission_classes=[IsAuthenticated])
     def retrieve_cart(self, request, pk=None):
         try:
             cart = Cart.objects.get(user_id=pk)

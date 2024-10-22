@@ -77,18 +77,25 @@ class OrderSerializer(serializers.ModelSerializer):
         return instance
 
 class CartItemSerializer(serializers.ModelSerializer):
-    product = ProductSerializer(read_only=True) 
+    product = ProductSerializer(read_only=True)
 
     class Meta:
         model = CartItem
-        exclude = ['cart'] 
+        exclude = ['cart']
 
 class CartSerializer(serializers.ModelSerializer):
-    items = CartItemSerializer(source='cartitem_set', many=True)  
-
+    items = CartItemSerializer(source='cartitem_set', many=True)
+    total_price = serializers.SerializerMethodField()
+    def get_total_price(self, obj):
+        total = 0
+        for item in obj.cartitem_set.all():
+            total += item.quantity * item.product.price_after_discount
+        return total
     class Meta:
         model = Cart
-        fields = ['id', 'user', 'created_at', 'items'] 
+        fields = ['total_price','id', 'user', 'created_at', 'items']  
+
+
 
 class WishlistItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)  
