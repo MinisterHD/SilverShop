@@ -126,7 +126,6 @@ class ProductSerializer(TranslatableModelSerializer):
         return product
 
     def update(self, instance, validated_data):
-
         translations = {
             'en': {
                 'name': validated_data.get('translations_en_name', instance.safe_translation_getter('name', default=None, language_code='en')),
@@ -148,6 +147,13 @@ class ProductSerializer(TranslatableModelSerializer):
 
         images = validated_data.get('images', None)
         if images and isinstance(images, list):
+            
+            instance.image1 = None
+            instance.image2 = None
+            instance.image3 = None
+            instance.image4 = None
+
+           
             if len(images) > 0:
                 instance.image1 = images[0]
             if len(images) > 1:
@@ -158,7 +164,7 @@ class ProductSerializer(TranslatableModelSerializer):
                 instance.image4 = images[3]
 
         for attr, value in validated_data.items():
-            if hasattr(instance, attr):  
+            if hasattr(instance, attr) and attr != 'images':  
                 setattr(instance, attr, value)
 
         instance.save()
