@@ -213,6 +213,7 @@ class CartViewSet(viewsets.ViewSet):
 
 #WishList
 
+
 class WishlistViewSet(viewsets.ModelViewSet):
     queryset = Wishlist.objects.all()
     serializer_class = WishlistSerializer
