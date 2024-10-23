@@ -65,6 +65,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             order = serializer.save(user=self.request.user)
             total_price = 0
+            cart = Cart.objects.get(user=self.request.user)
             for item_data in self.request.data.get('order_items', []):
                 product = Product.objects.get(id=item_data['product'])
                 quantity = item_data['quantity']
@@ -77,7 +78,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                 total_price += product.price * quantity
             order.total_price = total_price
             order.save()
-
+            cart.cart_items.all().delete()
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
@@ -211,6 +212,7 @@ class CartViewSet(viewsets.ViewSet):
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 #WishList
+
 class WishlistViewSet(viewsets.ModelViewSet):
     queryset = Wishlist.objects.all()
     serializer_class = WishlistSerializer
@@ -222,80 +224,9 @@ class WishlistViewSet(viewsets.ModelViewSet):
         return {'request': self.request}
 
     def get_serializer(self, *args, **kwargs):
-        serializer_class = WishlistSerializer
+        serializer_class = self.get_serializer_class()
         kwargs['context'] = self.get_serializer_context()
         return serializer_class(*args, **kwargs)
-
-    @action(detail=False, methods=['post'], url_path='add', permission_classes=[IsAuthenticated])
-    def add_to_wishlist(self, request):
-        user = request.user
-        product_id = request.data.get('product_id')
-
-        try:
-            product = Product.objects.get(id=product_id)
-        except Product.DoesNotExist:
-            return Response({"detail": "Product not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        try:
-            with transaction.atomic():
-                wishlist, created = Wishlist.objects.get_or_create(user=user)
-                wishlist_item, created = WishlistItem.objects.get_or_create(wishlist=wishlist, product=product)
-                wishlist_serializer = self.get_serializer(wishlist)
-                return Response({
-                    "detail": "Product added to wishlist.",
-                    "wishlist": wishlist_serializer.data
-                }, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    @action(detail=True, methods=['delete'], url_path='remove-item/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
-    def remove_from_wishlist(self, request, pk=None, product_id=None):
-        try:
-            wishlist_item = WishlistItem.objects.get(wishlist__user_id=pk, product_id=product_id)
-            wishlist = wishlist_item.wishlist
-            wishlist_item.delete()
-            wishlist_serializer = self.get_serializer(wishlist)
-            return Response({
-                "detail": "Product removed from wishlist.",
-                "wishlist": wishlist_serializer.data
-            }, status=status.HTTP_204_NO_CONTENT)
-        except WishlistItem.DoesNotExist:
-            return Response({"detail": "Wishlist item not found."}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    @action(detail=True, methods=['get'], url_path='view-wishlist', permission_classes=[IsAuthenticated])
-    def retrieve_wishlist(self, request, pk=None):
-        try:
-            wishlist = Wishlist.objects.get(user_id=pk)
-            wishlist_serializer = self.get_serializer(wishlist)
-            return Response(wishlist_serializer.data, status=status.HTTP_200_OK)
-        except Wishlist.DoesNotExist:
-            return Response({"detail": "Wishlist not found."}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    queryset = Wishlist.objects.all()
-    serializer_class = WishlistSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrAdmin]
-    authentication_classes = [JWTAuthentication]
-    parser_classes = [JSONParser]
-    search_fields = ['user__username']
-    ordering_fields = ['user__username']
-    ordering = ['user__username']
-    pagination_class = CustomPageNumberPagination
-
-    def get_queryset(self):
-        queryset = super().get_queryset().prefetch_related('wishlist_items__product')
-        params = self.request.query_params
-
-        user_username = params.get('user__username')
-        if user_username:
-            queryset = queryset.filter(user__username__icontains=user_username)
-
-        ordering = params.get('ordering', 'user__username')
-        queryset = queryset.order_by(ordering)
-
-        return queryset
 
     def get_object(self):
         user_id = self.kwargs.get('user_id')
@@ -351,7 +282,19 @@ class WishlistViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
     def list_all(self, request):
         try:
-            queryset = self.filter_queryset(self.get_queryset())
+            queryset = self.get_queryset()
+
+            username = request.query_params.get('username')
+            if username:
+                queryset = queryset.filter(user__username=username)
+
+            search = request.query_params.get('search')
+            if search:
+                queryset = queryset.filter(user__username__icontains=search)
+
+            ordering = request.query_params.get('ordering', 'user__username')
+            queryset = queryset.order_by(ordering)
+
             page = self.paginate_queryset(queryset)
             if page is not None:
                 serializer = self.get_serializer(page, many=True)
