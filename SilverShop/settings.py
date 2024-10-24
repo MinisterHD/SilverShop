@@ -184,14 +184,14 @@ from datetime import timedelta
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 SESSION_COOKIE_NAME = 'sessionid'
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
-SESSION_COOKIE_SAMESITE = 'Lax'  # Options: 'Lax', 'Strict', 'None'
+SESSION_COOKIE_SECURE = False  
+SESSION_COOKIE_SAMESITE = 'Lax' 
 
 # CSRF settings
 CSRF_COOKIE_NAME = 'csrftoken'
 CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SECURE = True  # Set to True in production with HTTPS
-CSRF_COOKIE_SAMESITE = 'Lax'  # Options: 'Lax', 'Strict', 'None'
+CSRF_COOKIE_SECURE = False
+CSRF_COOKIE_SAMESITE = 'Lax'  
 
 SIMPLE_JWT = {
     'AUTH_COOKIE': 'access_token',  
