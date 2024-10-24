@@ -189,8 +189,8 @@ SESSION_COOKIE_SAMESITE = 'Lax'  # Options: 'Lax', 'Strict', 'None'
 
 # CSRF settings
 CSRF_COOKIE_NAME = 'csrftoken'
-CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SECURE = True  # Set to True in production with HTTPS
 CSRF_COOKIE_SAMESITE = 'Lax'  # Options: 'Lax', 'Strict', 'None'
 
 SIMPLE_JWT = {
