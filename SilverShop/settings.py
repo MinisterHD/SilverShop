@@ -185,13 +185,13 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 SESSION_COOKIE_NAME = 'sessionid'
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = False  
-SESSION_COOKIE_SAMESITE = 'Lax' 
+SESSION_COOKIE_SAMESITE = 'None' 
 
 # CSRF settings
 CSRF_COOKIE_NAME = 'csrftoken'
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SECURE = False
-CSRF_COOKIE_SAMESITE = 'Lax'  
+CSRF_COOKIE_SAMESITE = 'None'  
 
 SIMPLE_JWT = {
     'AUTH_COOKIE': 'access_token',  
