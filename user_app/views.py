@@ -38,24 +38,26 @@ class SignUpView(CreateAPIView):
             user = serializer.save()
 
             refresh = RefreshToken.for_user(user)
-            access = str(refresh.access_token)
+            access_token = str(refresh.access_token)
 
+            # Create response data
             response_data = {
                 'user': serializer.data,
                 'tokens': {
                     'refresh': str(refresh),
-                    'access': access,
+                    'access': access_token,
                 }
             }
 
-            
+            # Set expiration times for access and refresh tokens
             access_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME']
             refresh_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
 
+            # Create response and set cookies for tokens
             response = Response(data=response_data, status=status.HTTP_201_CREATED)
             response.set_cookie(
                 key=settings.SIMPLE_JWT['AUTH_COOKIE'],
-                value=access,
+                value=access_token,
                 httponly=True,
                 secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
                 samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
@@ -70,12 +72,14 @@ class SignUpView(CreateAPIView):
                 expires=refresh_token_expiration  
             )
             return response
+
         except ValidationError as e:
             return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error(f"Error during sign up: {str(e)}")
             return Response({'errors': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# User Login View
 class LoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     parser_classes = [JSONParser]
@@ -85,13 +89,15 @@ class LoginView(TokenObtainPairView):
         try:
             serializer.is_valid(raise_exception=True)
             response = Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+            # Set cookies for access and refresh tokens
             response.set_cookie(
                 key=settings.SIMPLE_JWT['AUTH_COOKIE'],
                 value=serializer.validated_data['token']['access'],
                 httponly=True,
                 secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
                 samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
-                expires=datetime.utcnow() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME']  # Set expiration date
+                expires=datetime.utcnow() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME']
             )
             response.set_cookie(
                 key='refresh_token',
@@ -99,16 +105,16 @@ class LoginView(TokenObtainPairView):
                 httponly=True,
                 secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
                 samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
-                expires=datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']  # Set expiration date
+                expires=datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
             )
             return response
 
         except ValidationError as e:
             return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
-
         except Exception as e:
             logger.error(f'Error during login: {str(e)}')
             return Response({'errors': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class LogoutView(APIView):
     authentication_classes = [JWTAuthentication]

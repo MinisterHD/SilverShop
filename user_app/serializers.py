@@ -26,6 +26,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 'access': str(refresh.access_token),
                 'refresh': str(refresh)
             }
+
+            # Include user data in response
             user = self.user
             user_data = {
                 'id': user.id,
@@ -42,7 +44,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 'token': token_data,
                 'user': user_data
             }
-            
         except AuthenticationFailed as exc:
             raise ValidationError({'detail': str(exc)}, code='authentication_failed')
 
