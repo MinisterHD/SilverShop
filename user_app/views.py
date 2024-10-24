@@ -17,7 +17,7 @@ import logging
 from .permissions import IsOwnerOrAdmin
 from rest_framework.generics import CreateAPIView
 from django.conf import settings
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta,timezone
 
 logger = logging.getLogger(__name__)
 
@@ -87,17 +87,23 @@ class LoginView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         try:
+            # Validate the serializer data
             serializer.is_valid(raise_exception=True)
+
+            # Create the response with validated data
             response = Response(serializer.validated_data, status=status.HTTP_200_OK)
 
-            # Set cookies for access and refresh tokens
+            # Get current time in UTC with time zone awareness
+            current_time = datetime.now(timezone.utc)
+
+            # Set cookies for access and refresh tokens with proper expiration
             response.set_cookie(
                 key=settings.SIMPLE_JWT['AUTH_COOKIE'],
                 value=serializer.validated_data['token']['access'],
                 httponly=True,
                 secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
                 samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
-                expires=datetime.utcnow() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME']
+                expires=current_time + timedelta(days=7)  # Set the expiration for 7 days
             )
             response.set_cookie(
                 key='refresh_token',
@@ -105,8 +111,9 @@ class LoginView(TokenObtainPairView):
                 httponly=True,
                 secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
                 samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
-                expires=datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
+                expires=current_time + timedelta(days=7)  # Set the expiration for 7 days
             )
+
             return response
 
         except ValidationError as e:
@@ -114,7 +121,6 @@ class LoginView(TokenObtainPairView):
         except Exception as e:
             logger.error(f'Error during login: {str(e)}')
             return Response({'errors': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 class LogoutView(APIView):
     authentication_classes = [JWTAuthentication]
