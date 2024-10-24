@@ -3,7 +3,7 @@ from .views import (
     CategoryViewSet,SubcategoryViewSet,
     ProductViewSet,
     CommentViewSet,
-    RatingViewSet,TopSellerAPIView
+    RatingViewSet
 )
 from rest_framework.routers import DefaultRouter
 
@@ -47,7 +47,7 @@ urlpatterns = [
  
     
     #TopSellerList
-    path('products/top-seller/', TopSellerAPIView.as_view(), name='top-seller'),
+    #path('products/top-seller/', TopSellerAPIView.as_view(), name='top-seller'),
 
 
 
