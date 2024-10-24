@@ -1,13 +1,13 @@
 from .models import *
 from .serializers import *
 from django.contrib.auth.hashers import make_password
-from rest_framework import viewsets, filters, status
+from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser, IsAuthenticated,IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAdminUser, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.parsers import JSONParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
+from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -16,23 +16,8 @@ from django.utils.translation import gettext_lazy as _
 import logging
 from .permissions import IsOwnerOrAdmin
 from rest_framework.generics import CreateAPIView
-logger = logging.getLogger(__name__)
-
-
-# Auth
-from rest_framework import status, viewsets
-from rest_framework.generics import CreateAPIView
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.parsers import JSONParser
-from rest_framework.exceptions import ValidationError
-from django.contrib.auth.hashers import make_password
-from django.utils.translation import gettext_lazy as _
 from django.conf import settings
-from .serializers import UserSignUpSerializer, CustomTokenObtainPairSerializer
-import logging
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -63,23 +48,28 @@ class SignUpView(CreateAPIView):
                 }
             }
 
+            
+            access_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME']
+            refresh_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
+
             response = Response(data=response_data, status=status.HTTP_201_CREATED)
             response.set_cookie(
                 key=settings.SIMPLE_JWT['AUTH_COOKIE'],
                 value=access,
                 httponly=True,
                 secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
+                expires=access_token_expiration  
             )
             response.set_cookie(
                 key='refresh_token',
                 value=str(refresh),
                 httponly=True,
                 secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
+                expires=refresh_token_expiration  
             )
             return response
-
         except ValidationError as e:
             return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -100,14 +90,16 @@ class LoginView(TokenObtainPairView):
                 value=serializer.validated_data['token']['access'],
                 httponly=True,
                 secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
+                expires=datetime.utcnow() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME']  # Set expiration date
             )
             response.set_cookie(
                 key='refresh_token',
                 value=serializer.validated_data['token']['refresh'],
                 httponly=True,
                 secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
+                expires=datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']  # Set expiration date
             )
             return response
 
