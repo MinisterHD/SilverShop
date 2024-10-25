@@ -71,7 +71,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                 quantity = item_data['quantity']
                 if product.stock < quantity:
                     raise ValidationError(f"Not enough stock for {product.name}.")
-                OrderItem.objects.create(order=order, product=product, quantity=quantity)
+                #OrderItem.objects.create(order=order, product=product, quantity=quantity)
                 product.stock -= quantity
                 product.sales_count += quantity
                 product.save()
