@@ -194,6 +194,8 @@ CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_SAMESITE = 'None'  
 
+SESSION_COOKIE_DOMAIN = "localhost"  
+CSRF_COOKIE_DOMAIN = "localhost"  
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
