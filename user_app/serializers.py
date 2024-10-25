@@ -17,11 +17,11 @@ class UserSignUpSerializer(serializers.ModelSerializer):
         return data
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-
     def validate(self, attrs):
         try:
             data = super().validate(attrs)
-            refresh = RefreshToken(data['refresh'])
+            refresh = self.get_token(self.user)
+
             token_data = {
                 'access': str(refresh.access_token),
                 'refresh': str(refresh)
@@ -33,19 +33,22 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 'id': user.id,
                 'username': user.username,
                 'email': user.email,
-                'firstname': user.first_name,
-                'lastname': user.last_name,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
                 'phone_number': user.phone_number,
                 'address': user.address,
                 'is_staff': user.is_staff,
                 'date_joined': user.date_joined,
             }
+
             return {
                 'token': token_data,
                 'user': user_data
             }
+
         except AuthenticationFailed as exc:
             raise ValidationError({'detail': str(exc)}, code='authentication_failed')
+
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:

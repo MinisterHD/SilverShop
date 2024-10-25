@@ -181,7 +181,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 from datetime import timedelta
 
-SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 SESSION_COOKIE_NAME = 'sessionid'
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = False  
@@ -195,14 +195,12 @@ CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_SAMESITE = 'None'  
 
 SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
     'AUTH_COOKIE': 'access_token',  
-    'AUTH_COOKIE_SECURE': False,     
-    'AUTH_COOKIE_HTTP_ONLY': True,  
-    'AUTH_COOKIE_PATH': '/',        
-    'AUTH_COOKIE_SAMESITE': 'None',
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('JWT_ACCESS_TOKEN_LIFETIME', default=10, cast=int)),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=config('JWT_REFRESH_TOKEN_LIFETIME', default=7, cast=int)),
-    'AUTH_COOKIE_MAX_AGE': 3600 * 24 * 7,
+    'AUTH_COOKIE_SECURE': True,
+    'AUTH_COOKIE_SAMESITE': 'Strict',
 }
 
 PARLER_LANGUAGES = {

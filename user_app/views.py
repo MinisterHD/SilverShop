@@ -30,17 +30,17 @@ class SignUpView(CreateAPIView):
         try:
             serializer.is_valid(raise_exception=True)
             username = serializer.validated_data['username']
-
             if User.objects.filter(username=username).exists():
                 raise ValidationError({'username': _('Username already exists.')})
 
+            # Save user with hashed password
             serializer.validated_data['password'] = make_password(serializer.validated_data['password'])
             user = serializer.save()
 
+            # Generate tokens
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)
 
-            # Create response data
             response_data = {
                 'user': serializer.data,
                 'tokens': {
@@ -49,19 +49,18 @@ class SignUpView(CreateAPIView):
                 }
             }
 
-            # Set expiration times for access and refresh tokens
+            # Create response and set cookies for tokens
+            response = Response(data=response_data, status=status.HTTP_201_CREATED)
             access_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME']
             refresh_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
 
-            # Create response and set cookies for tokens
-            response = Response(data=response_data, status=status.HTTP_201_CREATED)
             response.set_cookie(
                 key=settings.SIMPLE_JWT['AUTH_COOKIE'],
                 value=access_token,
                 httponly=True,
                 secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
                 samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
-                expires=access_token_expiration  
+                expires=access_token_expiration
             )
             response.set_cookie(
                 key='refresh_token',
@@ -69,7 +68,7 @@ class SignUpView(CreateAPIView):
                 httponly=True,
                 secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
                 samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
-                expires=refresh_token_expiration  
+                expires=refresh_token_expiration
             )
             return response
 
@@ -79,6 +78,7 @@ class SignUpView(CreateAPIView):
             logger.error(f"Error during sign up: {str(e)}")
             return Response({'errors': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 # User Login View
 class LoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -87,33 +87,29 @@ class LoginView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         try:
-            # Validate the serializer data
             serializer.is_valid(raise_exception=True)
+            data = serializer.validated_data
 
-            # Create the response with validated data
-            response = Response(serializer.validated_data, status=status.HTTP_200_OK)
-
-            # Get current time in UTC with time zone awareness
+            response = Response(data, status=status.HTTP_200_OK)
             current_time = datetime.now(timezone.utc)
 
-            # Set cookies for access and refresh tokens with proper expiration
+            # Set cookies with expiration from SIMPLE_JWT settings
             response.set_cookie(
                 key=settings.SIMPLE_JWT['AUTH_COOKIE'],
-                value=serializer.validated_data['token']['access'],
+                value=data['token']['access'],
                 httponly=True,
                 secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
                 samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
-                expires=current_time + timedelta(days=7)  # Set the expiration for 7 days
+                expires=current_time + timedelta(days=7)
             )
             response.set_cookie(
                 key='refresh_token',
-                value=serializer.validated_data['token']['refresh'],
+                value=data['token']['refresh'],
                 httponly=True,
                 secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
                 samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
-                expires=current_time + timedelta(days=7)  # Set the expiration for 7 days
+                expires=current_time + timedelta(days=7)
             )
-
             return response
 
         except ValidationError as e:
