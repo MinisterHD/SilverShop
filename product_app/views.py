@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework import generics
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.generics import ListAPIView
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly,IsAdminUser
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly,IsAdminUser,AllowAny
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import ValidationError, NotFound
@@ -229,11 +229,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': f'An error occurred while deleting the Product: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-    @action(detail=False, methods=['get'], url_path='top-sellers')
-    def top_sellers(self, request):
-        top_sellers = Product.objects.order_by('-sales_count')[:10]  
-        serializer = self.get_serializer(top_sellers, many=True)
-        return Response(serializer.data)
+
 # Comments
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
@@ -361,5 +357,12 @@ class RatingViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': f'An error occurred while deleting the rating: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
 
+class TopSellerAPIView(ListAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
 
 
+    def get_queryset(self):
+        return self.queryset.order_by('-sales_count')[:10]

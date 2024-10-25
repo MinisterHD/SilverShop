@@ -3,7 +3,7 @@ from .views import (
     CategoryViewSet,SubcategoryViewSet,
     ProductViewSet,
     CommentViewSet,
-    RatingViewSet
+    RatingViewSet,TopSellerAPIView
 )
 from rest_framework.routers import DefaultRouter
 
@@ -16,6 +16,10 @@ router.register(r'ratings', RatingViewSet, basename='rating')
 
 urlpatterns = [
     path('', include(router.urls)),
+    #TopSellerList
+    path('top-seller/', TopSellerAPIView.as_view(), name='top-seller'),
+
+
     # Category
     #path('categories/create/', CreateCategoryAPIView.as_view(), name='create-category'),
     #path('categories/', CategoryListAPIView.as_view(), name='category-list'),
@@ -46,10 +50,7 @@ urlpatterns = [
     #path('ratings/<int:rating_id>/', RatingAPIView.as_view(), name='rating-detail'), 
  
     
-    #TopSellerList
-    #path('products/top-seller/', TopSellerAPIView.as_view(), name='top-seller'),
-
-
+   
 
  
 ]
