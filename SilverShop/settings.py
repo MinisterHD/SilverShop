@@ -196,13 +196,14 @@ CSRF_COOKIE_SAMESITE = 'None'
 
 SESSION_COOKIE_DOMAIN = "localhost"  
 CSRF_COOKIE_DOMAIN = "localhost"  
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'AUTH_COOKIE': 'access_token',  
     'AUTH_COOKIE_SECURE': True,
-    'AUTH_COOKIE_SAMESITE': 'Strict',
+    'AUTH_COOKIE_SAMESITE': 'Lax',
 }
 
 PARLER_LANGUAGES = {

@@ -142,3 +142,20 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrAdmin]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
+
+
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from .serializers import UserSerializer
+
+class UserProfileView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user  
+        serializer = UserSerializer(user)  
+        return Response(serializer.data)  
