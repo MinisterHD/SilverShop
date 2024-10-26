@@ -16,7 +16,7 @@ from .permissions import IsOwnerOrAdmin
 from rest_framework.generics import CreateAPIView
 from django.conf import settings
 from django.db.models import Q
-from django.utils import timezone  
+from django.utils import timezone
 from datetime import datetime, timedelta
 from .utils import generate_otp, send_otp_via_sms
 
@@ -36,7 +36,7 @@ class SignUpView(CreateAPIView):
 
             user = serializer.save()
 
-       
+            # Generate tokens
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)
 
@@ -48,7 +48,7 @@ class SignUpView(CreateAPIView):
                 }
             }
 
-          
+            # Create response and set cookies for tokens
             response = Response(data=response_data, status=status.HTTP_201_CREATED)
             access_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME']
             refresh_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
@@ -77,7 +77,6 @@ class SignUpView(CreateAPIView):
             logger.error(f"Error during sign up: {str(e)}")
             return Response({'errors': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 class OTPLoginView(APIView):
     def post(self, request):
         serializer = OTPLoginSerializer(data=request.data)
@@ -92,8 +91,8 @@ class OTPLoginView(APIView):
                 return Response({'error': 'User with this phone number does not exist.'}, status=status.HTTP_400_BAD_REQUEST)
 
             if otp:
-                if user.otp == otp and user.otp_expiration > timezone.now():  
-              
+                if user.otp == otp and user.otp_expiration > timezone.now():
+                    # Generate tokens
                     refresh = RefreshToken.for_user(user)
                     access_token = str(refresh.access_token)
 
@@ -115,13 +114,12 @@ class OTPLoginView(APIView):
             else:
                 otp = generate_otp()
                 user.otp = otp
-                user.otp_expiration = timezone.now() + timedelta(minutes=10)  
+                user.otp_expiration = timezone.now() + timedelta(minutes=10)
                 user.save()
                 send_otp_via_sms(phone_number, otp)
                 return Response({'message': 'OTP sent to your phone number.'}, status=status.HTTP_200_OK)
         logger.error(f"OTP login validation failed: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class LogoutView(APIView):
     authentication_classes = [JWTAuthentication]
@@ -139,7 +137,6 @@ class LogoutView(APIView):
         except Exception as e:
             logger.error(f"Error during logout: {str(e)}")
             return Response(data={'message': 'An error occurred during logout.', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -191,12 +188,11 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-
 class UserProfileView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user  
-        serializer = UserSerializer(user)  
+        user = request.user
+        serializer = UserSerializer(user)
         return Response(serializer.data)
