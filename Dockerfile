@@ -5,9 +5,14 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     gcc \
+    default-libmysqlclient-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . /app
+
+ENV MYSQLCLIENT_CFLAGS="-I/usr/include/mysql"
+ENV MYSQLCLIENT_LDFLAGS="-L/usr/lib/x86_64-linux-gnu -lmysqlclient"
 
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -15,4 +20,4 @@ EXPOSE 8000
 
 ENV DJANGO_SETTINGS_MODULE=SilverShop.settings
 
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "SilverShop.asgi:application"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

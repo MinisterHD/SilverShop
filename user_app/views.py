@@ -22,7 +22,9 @@ from .utils import generate_otp, send_otp_via_sms
 
 logger = logging.getLogger(__name__)
 
-class SignUpView(CreateAPIView):
+from django.db import IntegrityError
+
+class SendOTP(CreateAPIView):
     serializer_class = UserSignUpSerializer
     parser_classes = [JSONParser]
 
@@ -31,53 +33,36 @@ class SignUpView(CreateAPIView):
         try:
             serializer.is_valid(raise_exception=True)
             phone_number = serializer.validated_data['phone_number']
-            if User.objects.filter(phone_number=phone_number).exists():
-                raise ValidationError({'phone_number': _('Phone number already exists.')})
 
-            user = serializer.save()
+            try:
+                user = User.objects.get(phone_number=phone_number)
+                if user.otp and user.otp_expiration > timezone.now():
+                    response_data = {
+                        'message': 'OTP already sent to your phone number. Please verify to complete the signup process.',
+                        'otp': user.otp  # Include OTP in response for testing
+                    }
+                    return Response(data=response_data, status=status.HTTP_200_OK)
+            except User.DoesNotExist:
+                user = User.objects.create(phone_number=phone_number)
 
-            # Generate tokens
-            refresh = RefreshToken.for_user(user)
-            access_token = str(refresh.access_token)
+            otp = generate_otp(user)
+            send_otp_via_sms(user)
 
             response_data = {
-                'user': serializer.data,
-                'tokens': {
-                    'refresh': str(refresh),
-                    'access': access_token,
-                }
+                'message': 'OTP sent to your phone number. Please verify to complete the signup process.',
+                'otp': otp  # Include OTP in response for testing
             }
 
-            # Create response and set cookies for tokens
-            response = Response(data=response_data, status=status.HTTP_201_CREATED)
-            access_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME']
-            refresh_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
-
-            response.set_cookie(
-                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
-                value=access_token,
-                httponly=True,
-                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
-                expires=access_token_expiration
-            )
-            response.set_cookie(
-                key='refresh_token',
-                value=str(refresh),
-                httponly=True,
-                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
-                expires=refresh_token_expiration
-            )
-            return response
+            return Response(data=response_data, status=status.HTTP_201_CREATED)
 
         except ValidationError as e:
-            return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+            print(f"Validation error during signup: {e}")
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            logger.error(f"Error during sign up: {str(e)}")
-            return Response({'errors': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            print(f"Unexpected error during signup: {e}")
+            return Response({'error': 'An unexpected error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class OTPLoginView(APIView):
+class CheckOTP(APIView):
     def post(self, request):
         serializer = OTPLoginSerializer(data=request.data)
         if serializer.is_valid():
@@ -87,12 +72,13 @@ class OTPLoginView(APIView):
             try:
                 user = User.objects.get(phone_number=phone_number)
             except User.DoesNotExist:
-                logger.error(f"User with phone number {phone_number} does not exist.")
+                print(f"User with phone number {phone_number} does not exist.")
                 return Response({'error': 'User with this phone number does not exist.'}, status=status.HTTP_400_BAD_REQUEST)
 
             if otp:
+
                 if user.otp == otp and user.otp_expiration > timezone.now():
-                    # Generate tokens
+
                     refresh = RefreshToken.for_user(user)
                     access_token = str(refresh.access_token)
 
@@ -107,20 +93,38 @@ class OTPLoginView(APIView):
                             'access': access_token,
                         }
                     }
-                    return Response(response_data, status=status.HTTP_200_OK)
+
+                    response = Response(data=response_data, status=status.HTTP_200_OK)
+                    access_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME']
+                    refresh_exp = datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
+
+                    response.set_cookie(
+                        key=settings.SIMPLE_JWT['AUTH_COOKIE'],
+                        value=access_token,
+                        httponly=True,
+                        secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                        samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
+                        expires=access_token_expiration
+                    )
+                    response.set_cookie(
+                        key='refresh_token',
+                        value=str(refresh),
+                        httponly=True,
+                        secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                        samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
+                        expires=refresh_exp
+                    )
+                    return response
                 else:
-                    logger.error(f"Invalid or expired OTP for user with phone number {phone_number}.")
+                    print(f"Invalid or expired OTP for user with phone number {phone_number}. OTP: {otp}, User OTP: {user.otp}, Expiration: {user.otp_expiration}")
                     return Response({'error': 'Invalid or expired OTP.'}, status=status.HTTP_400_BAD_REQUEST)
             else:
-                otp = generate_otp()
-                user.otp = otp
-                user.otp_expiration = timezone.now() + timedelta(minutes=10)
-                user.save()
-                send_otp_via_sms(phone_number, otp)
+                send_otp_via_sms(user)
                 return Response({'message': 'OTP sent to your phone number.'}, status=status.HTTP_200_OK)
-        logger.error(f"OTP login validation failed: {serializer.errors}")
+        print(f"OTP login validation failed: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    
+    
 class LogoutView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]

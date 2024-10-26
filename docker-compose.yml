@@ -2,20 +2,21 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:17
-    env_file:
-      - SilverShop/.env
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    image: mysql:latest
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: rootpassword
     ports:
-      - "5432:5432"
+      - "3306:3306"
 
   redis:
     image: redis:6
 
   web:
     build: .
-    command: daphne -b 0.0.0.0 -p 8000 SilverShop.asgi:application
+    command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
     ports:
@@ -48,19 +49,12 @@ services:
     env_file:
       - SilverShop/.env
 
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: pgadmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com  
-      PGADMIN_DEFAULT_PASSWORD: admin  
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "8080:80"
     depends_on:
       - db
-    ports:
-      - "5050:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-
-volumes:
-  postgres_data:
-  pgadmin_data:
