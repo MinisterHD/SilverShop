@@ -283,15 +283,15 @@ class WishlistViewSet(viewsets.ModelViewSet):
         try:
             queryset = self.get_queryset()
 
-            username = request.query_params.get('username')
-            if username:
-                queryset = queryset.filter(user__username=username)
+            phone_number = request.query_params.get('phone_number')
+            if phone_number:
+                queryset = queryset.filter(user__phone_number=phone_number)
 
             search = request.query_params.get('search')
             if search:
-                queryset = queryset.filter(user__username__icontains=search)
+                queryset = queryset.filter(user__phone_number__icontains=search)
 
-            ordering = request.query_params.get('ordering', 'user__username')
+            ordering = request.query_params.get('ordering', 'phone_number')
             queryset = queryset.order_by(ordering)
 
             page = self.paginate_queryset(queryset)

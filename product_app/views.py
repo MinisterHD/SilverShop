@@ -291,7 +291,7 @@ class RatingViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ['product__name', 'user__username']
+    search_fields = ['product__name', 'user__phone_number']
     ordering_fields = ['product', 'user']
     ordering = ['product']
     lookup_url_kwarg = 'rating_id'
