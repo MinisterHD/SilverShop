@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'django_celery_beat',
     'product_app.apps.ProductAppConfig',
     'order_app',
-    'chat_app',
+    #'chat_app',
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
@@ -285,3 +285,4 @@ CORS_ALLOW_ALL_ORIGINS = True
 #]
 
 CORS_ALLOW_CREDENTIALS = True
+KAVENEGAR_API_KEY = '375A2B705A556E6352567456654C5A4271303658736967646D517165456466496943697A2B326F467678733D'

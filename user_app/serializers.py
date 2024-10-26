@@ -1,58 +1,27 @@
 from rest_framework import serializers
-from .models import *
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.exceptions import AuthenticationFailed,ValidationError
+from .models import User
+from rest_framework.exceptions import ValidationError
 
 class UserSignUpSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = '__all__'
+        fields = ['phone_number']  
 
     def validate(self, data):
-        username = data.get('username')
-        if User.objects.filter(username=username).exists():
-            raise serializers.ValidationError({'username': 'Username already exists.'})  
-
+        phone_number = data.get('phone_number')
+        if User.objects.filter(phone_number=phone_number).exists():
+            raise serializers.ValidationError({'phone_number': 'Phone number already exists.'})
         return data
 
-class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    def validate(self, attrs):
-        try:
-            data = super().validate(attrs)
-            refresh = self.get_token(self.user)
+    def create(self, validated_data):
+        return super().create(validated_data)
 
-            token_data = {
-                'access': str(refresh.access_token),
-                'refresh': str(refresh)
-            }
-
-            # Include user data in response
-            user = self.user
-            user_data = {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-                'phone_number': user.phone_number,
-                'address': user.address,
-                'is_staff': user.is_staff,
-                'date_joined': user.date_joined,
-            }
-
-            return {
-                'token': token_data,
-                'user': user_data
-            }
-
-        except AuthenticationFailed as exc:
-            raise ValidationError({'detail': str(exc)}, code='authentication_failed')
-
+class OTPLoginSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=11)
+    otp = serializers.CharField(max_length=6, required=False)
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model=User
+        model = User
         exclude = ["last_login"]
-
-        read_only_fields=['user_permissions','groups']
+        read_only_fields = ['user_permissions', 'groups']
