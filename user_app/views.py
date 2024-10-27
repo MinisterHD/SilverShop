@@ -1,5 +1,5 @@
-from .models import User
-from .serializers import CheckOTPSerializer, SendOTPSerializer, UserSerializer,UserProfileUpdateSerializer
+from .models import User,AdminStatus
+from .serializers import CheckOTPSerializer, SendOTPSerializer, UserSerializer,UserProfileUpdateSerializer,AdminStatusSerializer
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -11,7 +11,7 @@ from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils.translation import gettext_lazy as _
 import logging
-from .permissions import IsOwnerOrAdmin
+from .permissions import IsOwnerOrAdmin,IsStaffUser
 from rest_framework.generics import CreateAPIView
 from django.conf import settings
 from django.db.models import Q
@@ -216,3 +216,8 @@ class UserProfileUpdateView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class AdminStatusViewSet(viewsets.ModelViewSet):
+    queryset = AdminStatus.objects.all()
+    serializer_class = AdminStatusSerializer
+    permission_classes = [IsStaffUser]

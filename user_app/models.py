@@ -18,3 +18,18 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.phone_number
+
+
+class AdminStatus(models.Model):
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+    ]
+    
+    phone_number = models.CharField(max_length=15)
+    status = models.CharField(max_length=8, choices=STATUS_CHOICES)
+    name = models.CharField(max_length=50)
+    description = models.TextField(max_length=100)
+
+    def __str__(self):
+        return self.name

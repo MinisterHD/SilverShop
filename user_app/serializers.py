@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User
+from .models import User,AdminStatus
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
 
@@ -57,3 +57,8 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+    
+class AdminStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AdminStatus
+        fields = ['phone_number', 'status', 'name', 'description']

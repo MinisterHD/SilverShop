@@ -5,3 +5,8 @@ class IsOwnerOrAdmin(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
         return request.user.is_staff or obj.id == request.user.id
+    
+
+class IsStaffUser(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user and request.user.is_staff
