@@ -49,6 +49,11 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         instance.last_name = validated_data.get('last_name', instance.last_name)
         instance.address = validated_data.get('address', instance.address)
         instance.email = validated_data.get('email', instance.email)
-        instance.is_completed = True
+
+        if instance.first_name and instance.last_name and instance.address and instance.email:
+            instance.is_completed = True
+        else:
+            instance.is_completed = False
+
         instance.save()
         return instance
