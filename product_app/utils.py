@@ -1,10 +1,24 @@
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
-from order_app.models import WishlistItem
 import logging
+from kavenegar import *
+from django.conf import settings
+from order_app.models import WishlistItem
 
 logger = logging.getLogger(__name__)
+
+def send_sms(phone_number, message):
+    try:
+        api = KavenegarAPI(settings.KAVENEGAR_API_KEY)
+        params = {
+            'sender': '',  
+            'receptor': phone_number,
+            'message': message
+        }
+        response = api.sms_send(params)
+        return response
+    except APIException as e:
+        logger.error(f"Kavenegar APIException: {e}")
+    except HTTPException as e:
+        logger.error(f"Kavenegar HTTPException: {e}")
 
 def notify_users(product):
     logger.info(f"Notifying users about product availability: {product.name}")
@@ -14,16 +28,13 @@ def notify_users(product):
     for item in wishlist_items:
         user = item.wishlist.user
         if user.id not in notified_users:
-            logger.info(f"Sending email to user {user.id}")
- 
-            subject = f"Product {product.name} is now available!"
-            html_message = render_to_string('email/product_available.html', {'product': product, 'user': user})
-            plain_message = strip_tags(html_message)
-            from_email = 'webmaster@example.com'  
-            to = user.email
+            logger.info(f"Sending SMS to user {user.id}")
 
-            logger.info("Calling send_mail function")
-            send_mail(subject, plain_message, from_email, [to], html_message=html_message)
-            logger.info("send_mail function called successfully")
+            message = f"Product {product.name} is now available!"
+            phone_number = user.phone_number
 
-            notified_users.add(user.id)  
+            logger.info("Calling send_sms function")
+            send_sms(phone_number, message)
+            logger.info("send_sms function called successfully")
+
+            notified_users.add(user.id)
