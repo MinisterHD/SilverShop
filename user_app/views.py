@@ -1,5 +1,5 @@
 from .models import User
-from .serializers import UserSignUpSerializer, OTPLoginSerializer, UserSerializer
+from .serializers import CheckOTPSerializer, SendOTPSerializer, UserSerializer
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -7,7 +7,6 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated, IsAuthentic
 from rest_framework.parsers import JSONParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils.translation import gettext_lazy as _
@@ -25,7 +24,7 @@ logger = logging.getLogger(__name__)
 from django.db import IntegrityError
 
 class SendOTP(CreateAPIView):
-    serializer_class = UserSignUpSerializer
+    serializer_class = SendOTPSerializer
     parser_classes = [JSONParser]
 
     def create(self, request, *args, **kwargs):
@@ -34,23 +33,31 @@ class SendOTP(CreateAPIView):
             serializer.is_valid(raise_exception=True)
             phone_number = serializer.validated_data['phone_number']
 
-            try:
-                user = User.objects.get(phone_number=phone_number)
-                if user.otp and user.otp_expiration > timezone.now():
-                    response_data = {
-                        'message': 'OTP already sent to your phone number. Please verify to complete the signup process.',
-                        'otp': user.otp  # Include OTP in response for testing
-                    }
-                    return Response(data=response_data, status=status.HTTP_200_OK)
-            except User.DoesNotExist:
-                user = User.objects.create(phone_number=phone_number)
+            user, created = User.objects.get_or_create(phone_number=phone_number)
 
-            otp = generate_otp(user)
+            # Clear expired OTP if it exists
+            if user.otp and user.otp_expiration <= timezone.now():
+                user.otp = None
+                user.otp_expiration = None
+
+            # If the user already has a valid OTP, notify the user
+            if user.otp and user.otp_expiration > timezone.now():
+                response_data = {
+                    'message': 'OTP already sent to your phone number. Please verify to complete the signup process.',
+                    'otp': user.otp  # This might show the old OTP; adjust if needed
+                }
+                return Response(data=response_data, status=status.HTTP_200_OK)
+
+            # Generate and send a new OTP
+            otp = generate_otp(user)  # Generate and save the new OTP
             send_otp_via_sms(user)
+
+            # Fetch the updated user to ensure we have the latest OTP value
+            user.refresh_from_db()  # Fetch the latest state from the database
 
             response_data = {
                 'message': 'OTP sent to your phone number. Please verify to complete the signup process.',
-                'otp': otp  # Include OTP in response for testing
+                'otp': user.otp  # Now this should show the correct OTP
             }
 
             return Response(data=response_data, status=status.HTTP_201_CREATED)
@@ -62,9 +69,10 @@ class SendOTP(CreateAPIView):
             print(f"Unexpected error during signup: {e}")
             return Response({'error': 'An unexpected error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 class CheckOTP(APIView):
     def post(self, request):
-        serializer = OTPLoginSerializer(data=request.data)
+        serializer = CheckOTPSerializer(data=request.data)
         if serializer.is_valid():
             phone_number = serializer.validated_data['phone_number']
             otp = serializer.validated_data.get('otp')
@@ -72,13 +80,11 @@ class CheckOTP(APIView):
             try:
                 user = User.objects.get(phone_number=phone_number)
             except User.DoesNotExist:
-                print(f"User with phone number {phone_number} does not exist.")
+                
                 return Response({'error': 'User with this phone number does not exist.'}, status=status.HTTP_400_BAD_REQUEST)
 
             if otp:
-
                 if user.otp == otp and user.otp_expiration > timezone.now():
-
                     refresh = RefreshToken.for_user(user)
                     access_token = str(refresh.access_token)
 
@@ -116,15 +122,14 @@ class CheckOTP(APIView):
                     )
                     return response
                 else:
-                    print(f"Invalid or expired OTP for user with phone number {phone_number}. OTP: {otp}, User OTP: {user.otp}, Expiration: {user.otp_expiration}")
+                    
                     return Response({'error': 'Invalid or expired OTP.'}, status=status.HTTP_400_BAD_REQUEST)
             else:
                 send_otp_via_sms(user)
                 return Response({'message': 'OTP sent to your phone number.'}, status=status.HTTP_200_OK)
-        print(f"OTP login validation failed: {serializer.errors}")
+        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    
+       
 class LogoutView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
