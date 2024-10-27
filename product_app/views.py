@@ -9,26 +9,18 @@ from rest_framework.response import Response
 from rest_framework import generics
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.generics import ListAPIView
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly,IsAdminUser,AllowAny
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, IsAdminUser, AllowAny
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import ValidationError, NotFound
-from parler.utils.context import activate, switch_language
-from rest_framework.pagination import PageNumberPagination
 from django.db import transaction
-from rest_framework.decorators import action
-# Category
+
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [IsAuthenticatedOrReadOnly, IsAdminUser]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
-
-    def create(self, request, *args, **kwargs):
-        language = request.data.get('language', 'en')
-        activate(language)
-        return super().create(request, *args, **kwargs)
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -37,35 +29,25 @@ class CategoryViewSet(viewsets.ModelViewSet):
         if 'slugname' in params:
             queryset = queryset.filter(slugname=params['slugname'])
 
-        language = params.get('language', 'en')
-        queryset = queryset.active_translations(language_code=language)
-        
         return queryset
 
     def get_object(self):
-        language = self.request.query_params.get('language', 'en')
         obj = super().get_object()
-
-        with switch_language(obj, language):
-            return obj
+        return obj
 
     def retrieve(self, request, *args, **kwargs):
-        language = request.query_params.get('language', 'en')
         try:
             obj = self.get_object()
-            with switch_language(obj, language):
-                serializer = self.get_serializer(obj)
-                return Response(serializer.data)
+            serializer = self.get_serializer(obj)
+            return Response(serializer.data)
         except Http404:
             raise NotFound('Category not found.')
         except Exception as e:
             return Response({'error': f'An error occurred while retrieving the category: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def update(self, request, *args, **kwargs):
-        language = request.data.get('language', 'en')
         obj = self.get_object()
-        with switch_language(obj, language):
-            return super().update(request, *args, **kwargs)
+        return super().update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
         try:
@@ -73,7 +55,6 @@ class CategoryViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': f'An error occurred while deleting the category: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# SubCategory
 class SubcategoryViewSet(viewsets.ModelViewSet):
     queryset = Subcategory.objects.all()
     serializer_class = SubcategorySerializer
@@ -81,11 +62,6 @@ class SubcategoryViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
     lookup_url_kwarg = 'subcategory_id'
-
-    def create(self, request, *args, **kwargs):
-        language = request.data.get('language', 'en')
-        activate(language)
-        return super().create(request, *args, **kwargs)
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -121,34 +97,18 @@ class SubcategoryViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': f'An error occurred while deleting the Subcategory: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# Products
-class ProductPagination(PageNumberPagination):
-    page_size_query_param = 'page_size'
-
-    def get_paginated_response(self, data):
-        return Response({
-            'count': self.page.paginator.count,
-            'total_pages': self.page.paginator.num_pages,
-            'next': self.get_next_link(),
-            'previous': self.get_previous_link(),
-            'results': data
-        })
-
-
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, IsAdminUser]
     authentication_classes = [JWTAuthentication]
     parser_classes = [MultiPartParser, JSONParser]
-    pagination_class = ProductPagination
+    
     search_fields = ['name']
     lookup_url_kwarg = 'product_id'
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        language = request.data.get('language', 'en')
-        activate(language)
         try:
             return super().create(request, *args, **kwargs)
         except ValidationError as e:
@@ -228,7 +188,6 @@ class ProductViewSet(viewsets.ModelViewSet):
             return super().destroy(request, *args, **kwargs)
         except Exception as e:
             return Response({'error': f'An error occurred while deleting the Product: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
 
 # Comments
 class CommentViewSet(viewsets.ModelViewSet):

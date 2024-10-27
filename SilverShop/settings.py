@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     #'channels',
     'corsheaders',
-    'parler',
+    
     'user_app',
     'django_celery_beat',
     'product_app.apps.ProductAppConfig',
@@ -207,16 +207,6 @@ SIMPLE_JWT = {
     'AUTH_COOKIE_SAMESITE': 'Lax',
 }
 
-PARLER_LANGUAGES = {
-    None: (
-        {'code': 'en'},
-        {'code': 'fa'},
-    ),
-    'default': {
-        'fallback': 'en',  
-        'hide_untranslated': False, 
-    }
-}
 
 
 ALLOWED_HOSTS = ['*']

@@ -11,22 +11,10 @@ from rest_framework.permissions import IsAuthenticated,IsAuthenticatedOrReadOnly
 from .permissions import IsOwnerOrAdmin
 from django.db import  transaction
 from django.shortcuts import get_object_or_404
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
 from django.utils import timezone
 logger = logging.getLogger(__name__)
 
-class CustomPageNumberPagination(PageNumberPagination):
-    page_size_query_param = 'page_size'
-
-    def get_paginated_response(self, data):
-        return Response({
-            'count': self.page.paginator.count,
-            'total_pages': self.page.paginator.num_pages,
-            'next': self.get_next_link(),
-            'previous': self.get_previous_link(),
-            'results': data
-        })
 
 #Order
 class OrderViewSet(viewsets.ModelViewSet):
@@ -37,9 +25,10 @@ class OrderViewSet(viewsets.ModelViewSet):
     parser_classes = [JSONParser]
     ordering_fields = ['delivery_date', 'order_date']
     ordering = ['-order_date']
-    pagination_class = CustomPageNumberPagination
+    
     def get_serializer_context(self):
         return {'request': self.request}
+
     def get_queryset(self):
         queryset = super().get_queryset().prefetch_related('order_items__product')
         params = self.request.query_params
@@ -71,14 +60,14 @@ class OrderViewSet(viewsets.ModelViewSet):
                 quantity = item_data['quantity']
                 if product.stock < quantity:
                     raise ValidationError(f"Not enough stock for {product.name}.")
-                #OrderItem.objects.create(order=order, product=product, quantity=quantity)
                 product.stock -= quantity
                 product.sales_count += quantity
                 product.save()
                 total_price += product.price * quantity
             order.total_price = total_price
             order.save()
-            cart.cart.cartitem_set.all().delete()
+            cart.cartitem_set.all().delete()  
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()

@@ -3,8 +3,6 @@ gevent==24.10.3
 Django==5.1.2
 django-celery-beat==2.7.0
 django-cors-headers==4.5.0
-django_parler==2.3
-django_parler_rest==2.2
 djangorestframework==3.15.2
 djangorestframework_simplejwt==5.3.1
 drf-spectacular==0.27.2

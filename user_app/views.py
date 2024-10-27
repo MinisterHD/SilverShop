@@ -21,7 +21,6 @@ from .utils import generate_otp, send_otp_via_sms
 
 logger = logging.getLogger(__name__)
 
-from django.db import IntegrityError
 
 class SendOTP(CreateAPIView):
     serializer_class = SendOTPSerializer
@@ -35,29 +34,29 @@ class SendOTP(CreateAPIView):
 
             user, created = User.objects.get_or_create(phone_number=phone_number)
 
-            # Clear expired OTP if it exists
+            
             if user.otp and user.otp_expiration <= timezone.now():
                 user.otp = None
                 user.otp_expiration = None
 
-            # If the user already has a valid OTP, notify the user
+            
             if user.otp and user.otp_expiration > timezone.now():
                 response_data = {
                     'message': 'OTP already sent to your phone number. Please verify to complete the signup process.',
-                    'otp': user.otp  # This might show the old OTP; adjust if needed
+                    'otp': user.otp  
                 }
                 return Response(data=response_data, status=status.HTTP_200_OK)
 
-            # Generate and send a new OTP
-            otp = generate_otp(user)  # Generate and save the new OTP
+            
+            otp = generate_otp(user)  
             send_otp_via_sms(user)
 
-            # Fetch the updated user to ensure we have the latest OTP value
-            user.refresh_from_db()  # Fetch the latest state from the database
+            
+            user.refresh_from_db()  
 
             response_data = {
                 'message': 'OTP sent to your phone number. Please verify to complete the signup process.',
-                'otp': user.otp  # Now this should show the correct OTP
+                'otp': user.otp  
             }
 
             return Response(data=response_data, status=status.HTTP_201_CREATED)

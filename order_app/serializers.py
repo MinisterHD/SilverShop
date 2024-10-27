@@ -1,12 +1,12 @@
 from rest_framework import serializers
 from .models import Order,CartItem,Cart,OrderItem,Wishlist, WishlistItem
-from product_app.serializers import ProductSerializer,ProductDetailSerializer
+from product_app.serializers import ProductSerializer
 from product_app.models import Product
 from django.db import transaction
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all()) 
-    product_detail=ProductDetailSerializer(read_only=True)
+    product_detail=ProductSerializer(read_only=True)
     class Meta:
         model = OrderItem
         fields = ['product', 'quantity','product_detail']
@@ -15,7 +15,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
         quantity = validated_data.pop('quantity')
 
         order_item = OrderItem.objects.create(product=product, quantity=quantity, **validated_data)
-        order_item.product_detail = ProductDetailSerializer(product).data
+        order_item.product_detail = ProductSerializer(product).data
         return order_item
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -51,7 +51,7 @@ class OrderSerializer(serializers.ModelSerializer):
             {
                 'product': item.product.id,
                 'quantity': item.quantity,
-                'product_detail': ProductDetailSerializer(item.product).data
+                'product_detail': ProductSerializer(item.product).data
             }
             for item in instance.order_items.all()
         ]
