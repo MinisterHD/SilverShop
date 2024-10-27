@@ -10,6 +10,7 @@ class User(AbstractUser):
     user_permissions = models.ManyToManyField('auth.Permission', related_name='my_user_permissions', blank=True)
     otp = models.CharField(max_length=6, null=True, blank=True)
     otp_expiration = models.DateTimeField(null=True, blank=True)
+    is_completed = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'phone_number'
     REQUIRED_FIELDS = []

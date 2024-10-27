@@ -38,3 +38,17 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         exclude = ["last_login"]
         read_only_fields = ['user_permissions', 'groups']
+
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'address', 'email']
+
+    def update(self, instance, validated_data):
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.address = validated_data.get('address', instance.address)
+        instance.email = validated_data.get('email', instance.email)
+        instance.is_completed = True
+        instance.save()
+        return instance

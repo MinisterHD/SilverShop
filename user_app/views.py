@@ -1,5 +1,5 @@
 from .models import User
-from .serializers import CheckOTPSerializer, SendOTPSerializer, UserSerializer
+from .serializers import CheckOTPSerializer, SendOTPSerializer, UserSerializer,UserProfileUpdateSerializer
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -67,7 +67,6 @@ class SendOTP(CreateAPIView):
         except Exception as e:
             print(f"Unexpected error during signup: {e}")
             return Response({'error': 'An unexpected error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 class CheckOTP(APIView):
     def post(self, request):
@@ -204,3 +203,16 @@ class UserProfileView(APIView):
         user = request.user
         serializer = UserSerializer(user)
         return Response(serializer.data)
+    
+class UserProfileUpdateView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    parser_classes = [JSONParser]
+
+    def post(self, request):
+        user = request.user
+        serializer = UserProfileUpdateSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
