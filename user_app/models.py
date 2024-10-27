@@ -11,7 +11,8 @@ class User(AbstractUser):
     otp = models.CharField(max_length=6, null=True, blank=True)
     otp_expiration = models.DateTimeField(null=True, blank=True)
     is_completed = models.BooleanField(default=False)
-
+    total_spent = models.PositiveIntegerField( default=0) 
+    
     USERNAME_FIELD = 'phone_number'
     REQUIRED_FIELDS = []
 
