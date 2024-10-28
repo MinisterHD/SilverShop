@@ -135,11 +135,10 @@ class LogoutView(APIView):
 
     def get(self, request):
         try:
-            if hasattr(request.user, 'auth_token'):
-                request.user.auth_token.delete()
             response = Response(data={'message': f'Bye {request.user.phone_number}!'}, status=status.HTTP_204_NO_CONTENT)
             response.delete_cookie(settings.SIMPLE_JWT['AUTH_COOKIE'])
             response.delete_cookie('refresh_token')
+
             return response
         except Exception as e:
             logger.error(f"Error during logout: {str(e)}")
@@ -217,7 +216,49 @@ class UserProfileUpdateView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-class AdminStatusViewSet(viewsets.ModelViewSet):
-    queryset = AdminStatus.objects.all()
-    serializer_class = AdminStatusSerializer
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+class AdminStatusSingletonView(APIView):
     permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        instance = AdminStatus.objects.first()
+        if not instance:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminStatusSerializer(instance)
+        return Response(serializer.data)
+    
+    def post(self, request):
+        if AdminStatus.objects.exists():
+            return Response({'detail': 'AdminStatus instance already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = AdminStatusSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def put(self, request):
+        instance = AdminStatus.objects.first()
+        if not instance:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminStatusSerializer(instance, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request):
+        instance = AdminStatus.objects.first()
+        if not instance:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminStatusSerializer(instance, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

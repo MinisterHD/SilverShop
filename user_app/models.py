@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 
 class User(AbstractUser):
     username = None 
@@ -33,3 +34,8 @@ class AdminStatus(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.pk and AdminStatus.objects.exists():
+            raise ValidationError('There can be only one AdminStatus instance')
+        return super(AdminStatus, self).save(*args, **kwargs)

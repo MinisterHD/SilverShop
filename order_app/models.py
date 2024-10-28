@@ -4,7 +4,7 @@ from product_app.models import Product
 
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    delivery_address = models.TextField()
+    delivery_address = models.TextField(blank=True, null=True)
     delivery_status = models.CharField(
         max_length=20,
         choices=[
@@ -13,14 +13,18 @@ class Order(models.Model):
             ('delivered', 'Delivered'),
             ('cancelled', 'Cancelled')
         ]
-            ,blank=False,null=False)
+            ,blank=False,null=False,default="pending")
     total_price = models.PositiveIntegerField(default=0)
     order_date = models.DateTimeField(auto_now_add=True)
-    delivery_date = models.DateTimeField(null=True)
     shipped_at = models.DateTimeField(null=True, blank=True)  
     products = models.ManyToManyField(Product)
     created_at = models.DateTimeField(auto_now_add=True)
+    def save(self, *args, **kwargs):
+        if not self.delivery_address and self.user.address:
+            self.delivery_address = self.user.address
+        super().save(*args, **kwargs)
 
+        
     def cancel_order(self):
         for item in self.order_items.all():
             product = item.product
