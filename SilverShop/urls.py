@@ -25,7 +25,7 @@ urlpatterns = [
     path('', include('user_app.urls')),
     path('', include('product_app.urls')),
     path('', include('order_app.urls')), 
-    #path('', include('chat_app.urls')),
+    path('', include('zarrin_pal.urls')),
     
     #Spectacular
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

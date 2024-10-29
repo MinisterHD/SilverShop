@@ -39,14 +39,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    #'channels',
     'corsheaders',
-    
+    'zarrin_pal',
     'user_app',
     'django_celery_beat',
     'product_app.apps.ProductAppConfig',
     'order_app',
-    #'chat_app',
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
@@ -279,3 +277,11 @@ CORS_ALLOW_CREDENTIALS = True
 
 KAVENEGAR_API_KEY = config('KAVENEGAR_API_KEY')
 OWNER_PHONE_NUMBER = '1234567890'
+
+# Add this to your settings.py file
+
+# Sandbox mode for Zarinpal
+SANDBOX = config('SANDBOX', cast=bool)  # Set to False in production
+
+# Merchant ID for Zarinpal
+MERCHANT = config('MERCHANT')
