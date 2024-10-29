@@ -85,13 +85,9 @@ class CheckOTP(APIView):
                 if user.otp == otp and user.otp_expiration > timezone.now():
                     refresh = RefreshToken.for_user(user)
                     access_token = str(refresh.access_token)
-
+                    user_serializer = UserSerializer(user)
                     response_data = {
-                        'user': {
-                            'id': user.id,
-                            'phone_number': user.phone_number,
-                            'email': user.email,
-                        },
+                        'user': user_serializer.data,
                         'tokens': {
                             'refresh': str(refresh),
                             'access': access_token,

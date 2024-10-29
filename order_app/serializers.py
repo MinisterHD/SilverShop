@@ -19,18 +19,20 @@ class OrderItemSerializer(serializers.ModelSerializer):
         return order_item
 
 class OrderSerializer(serializers.ModelSerializer):
-    order_items = OrderItemSerializer(many=True)
+    order_items = OrderItemSerializer(many=True, required=False)
     total_price = serializers.IntegerField(read_only=True)
     user = serializers.PrimaryKeyRelatedField(read_only=True) 
     user_first_name = serializers.CharField(source='user.first_name', read_only=True)
     user_last_name = serializers.CharField(source='user.last_name', read_only=True)
     user_phone_number = serializers.CharField(source='user.phone_number', read_only=True)
+
     class Meta:
         model = Order
-        fields = ["id",'user', 'user_first_name', 'user_last_name', 'user_phone_number','shipped_at', 'delivery_address', 'delivery_status', 'total_price', 'order_date', 'order_items']
-        read_only_fields = ['id', 'user', 'order_date', 'total_price']  
+        fields = ["id", 'user', 'user_first_name', 'user_last_name', 'user_phone_number', 'shipped_at', 'delivery_address', 'delivery_status', 'total_price', 'order_date', 'order_items']
+        read_only_fields = ['id', 'user', 'order_date', 'total_price']
+
     def create(self, validated_data):
-        order_items_data = validated_data.pop('order_items')
+        order_items_data = validated_data.pop('order_items', [])
         with transaction.atomic():
             order = Order.objects.create(**validated_data)
             total_price = 0

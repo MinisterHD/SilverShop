@@ -52,21 +52,29 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         with transaction.atomic():
-            order = serializer.save(user=self.request.user)
+            user = self.request.user
+            cart = Cart.objects.get(user=user)
+            if not cart.cartitem_set.exists():
+                raise ValidationError("Your cart is empty. Add items to your cart before placing an order.")
+            
+            order = serializer.save(user=user)
             total_price = 0
-            cart = Cart.objects.get(user=self.request.user)
-            for item_data in self.request.data.get('order_items', []):
-                product = Product.objects.get(id=item_data['product'])
-                quantity = item_data['quantity']
+
+            for cart_item in cart.cartitem_set.all():
+                product = cart_item.product
+                quantity = cart_item.quantity
                 if product.stock < quantity:
                     raise ValidationError(f"Not enough stock for {product.name}.")
                 product.stock -= quantity
                 product.sales_count += quantity
                 product.save()
+                OrderItem.objects.create(order=order, product=product, quantity=quantity)
                 total_price += product.price * quantity
+
             order.total_price = total_price
             order.save()
-            cart.cartitem_set.all().delete()  
+            cart.cartitem_set.all().delete()
+
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
@@ -143,10 +151,11 @@ class CartViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=True, methods=['get'], url_path='view-item/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
-    def retrieve_cart_item(self, request, pk=None, product_id=None):
+    @action(detail=False, methods=['get'], url_path='view-item/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
+    def retrieve_cart_item(self, request, product_id=None):
+        user = request.user  
         try:
-            cart_item = CartItem.objects.get(cart__user_id=pk, product_id=product_id)
+            cart_item = CartItem.objects.get(cart__user=user, product_id=product_id)
             cart_serializer = self.get_serializer(cart_item.cart)
             return Response(cart_serializer.data, status=status.HTTP_200_OK)
         except CartItem.DoesNotExist:
@@ -154,10 +163,11 @@ class CartViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=True, methods=['put', 'patch'], url_path='update-item/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
-    def update_cart_item(self, request, pk=None, product_id=None):
+    @action(detail=False, methods=['put', 'patch'], url_path='update-item/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
+    def update_cart_item(self, request, product_id=None):
+        user = request.user  
         try:
-            cart_item = CartItem.objects.get(cart__user_id=pk, product_id=product_id)
+            cart_item = CartItem.objects.get(cart__user=user, product_id=product_id)
             quantity = request.data.get('quantity')
             if quantity is None or quantity <= 0:
                 return Response({"detail": "Invalid quantity."}, status=status.HTTP_400_BAD_REQUEST)
@@ -173,10 +183,11 @@ class CartViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=True, methods=['delete'], url_path='remove-item/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
-    def delete_cart_item(self, request, pk=None, product_id=None):
+    @action(detail=False, methods=['delete'], url_path='remove-item/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
+    def delete_cart_item(self, request, product_id=None):
+        user = request.user  # Retrieve the user from the token
         try:
-            cart_item = CartItem.objects.get(cart__user_id=pk, product_id=product_id)
+            cart_item = CartItem.objects.get(cart__user=user, product_id=product_id)
             cart = cart_item.cart
             cart_item.delete()
             cart_serializer = self.get_serializer(cart)
@@ -189,10 +200,11 @@ class CartViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=True, methods=['get'], url_path='view-cart', permission_classes=[IsAuthenticated])
-    def retrieve_cart(self, request, pk=None):
+    @action(detail=False, methods=['get'], url_path='view-cart', permission_classes=[IsAuthenticated])
+    def retrieve_cart(self, request):
+        user = request.user  
         try:
-            cart = Cart.objects.get(user_id=pk)
+            cart = Cart.objects.get(user=user)
             cart_serializer = self.get_serializer(cart)
             return Response(cart_serializer.data, status=status.HTTP_200_OK)
         except Cart.DoesNotExist:
@@ -217,19 +229,19 @@ class WishlistViewSet(viewsets.ModelViewSet):
         return serializer_class(*args, **kwargs)
 
     def get_object(self):
-        user_id = self.kwargs.get('pk')
+        user = self.request.user
         try:
-            wishlist, created = Wishlist.objects.get_or_create(user_id=user_id)
+            wishlist, created = Wishlist.objects.get_or_create(user=user)
             return wishlist
         except Wishlist.DoesNotExist:
             raise NotFound(detail="Wishlist not found", code=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            logger.error(f"Error retrieving wishlist for user {user_id}: {str(e)}")
+            logger.error(f"Error retrieving wishlist for user {user.id}: {str(e)}")
             raise
 
-    @action(detail=True, methods=['post'], url_path='add', permission_classes=[IsAuthenticated])
-    def add_to_wishlist(self, request, pk=None):
-        user_id = pk
+    @action(detail=False, methods=['post'], url_path='add', permission_classes=[IsAuthenticated])
+    def add_to_wishlist(self, request):
+        user = request.user  
         product_id = request.data.get('product_id')
 
         if not product_id:
@@ -237,7 +249,7 @@ class WishlistViewSet(viewsets.ModelViewSet):
 
         try:
             product = get_object_or_404(Product, id=product_id)
-            wishlist, created = Wishlist.objects.get_or_create(user_id=user_id)
+            wishlist, created = Wishlist.objects.get_or_create(user=user)
             wishlist_item, created = WishlistItem.objects.get_or_create(wishlist=wishlist, product=product)
             if created:
                 return Response({"detail": "Product added to wishlist."}, status=status.HTTP_201_CREATED)
@@ -248,14 +260,14 @@ class WishlistViewSet(viewsets.ModelViewSet):
         except WishlistItem.MultipleObjectsReturned:
             return Response({"detail": "Product is already in the wishlist."}, status=status.HTTP_200_OK)
         except Exception as e:
-            logger.error(f"Error adding product {product_id} to wishlist for user {user_id}: {str(e)}")
+            logger.error(f"Error adding product {product_id} to wishlist for user {user.id}: {str(e)}")
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=True, methods=['delete'], url_path='remove/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
-    def remove_from_wishlist(self, request, pk=None, product_id=None):
-        user_id = pk
+    @action(detail=False, methods=['delete'], url_path='remove/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
+    def remove_from_wishlist(self, request, product_id=None):
+        user = request.user 
         try:
-            wishlist = Wishlist.objects.get(user_id=user_id)
+            wishlist = Wishlist.objects.get(user=user)
             wishlist_item = WishlistItem.objects.get(wishlist=wishlist, product_id=product_id)
             wishlist_item.delete()
             return Response({"detail": "Product removed from wishlist."}, status=status.HTTP_204_NO_CONTENT)
@@ -264,7 +276,7 @@ class WishlistViewSet(viewsets.ModelViewSet):
         except WishlistItem.DoesNotExist:
             return Response({"detail": "Product not found in wishlist."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            logger.error(f"Error removing product {product_id} from wishlist for user {user_id}: {str(e)}")
+            logger.error(f"Error removing product {product_id} from wishlist for user {user.id}: {str(e)}")
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
@@ -272,15 +284,15 @@ class WishlistViewSet(viewsets.ModelViewSet):
         try:
             queryset = self.get_queryset()
 
-            phone_number = request.query_params.get('phone_number')
-            if phone_number:
-                queryset = queryset.filter(user__phone_number=phone_number)
+            user_id = request.query_params.get('id')
+            if user_id:
+                queryset = queryset.filter(user__id=user_id)
 
             search = request.query_params.get('search')
             if search:
-                queryset = queryset.filter(user__phone_number__icontains=search)
+                queryset = queryset.filter(user__id__icontains=search)
 
-            ordering = request.query_params.get('ordering', 'phone_number')
+            ordering = request.query_params.get('ordering', 'id')
             queryset = queryset.order_by(ordering)
 
             page = self.paginate_queryset(queryset)

@@ -12,3 +12,4 @@ redis==5.1.1
 pillow==11.0.0
 kavenegar==1.1.2
 mysqlclient==2.2.5
+zeep==4.3.1
