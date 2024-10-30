@@ -190,8 +190,8 @@ CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_SAMESITE = 'None'  
 
-SESSION_COOKIE_DOMAIN = "localhost"  
-CSRF_COOKIE_DOMAIN = "localhost"  
+SESSION_COOKIE_DOMAIN = "127.0.0.1"  
+CSRF_COOKIE_DOMAIN = "127.0.0.1"  
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=10),
@@ -199,10 +199,10 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,  
     'AUTH_COOKIE': 'access_token',  
-    'AUTH_COOKIE_SECURE': True,
+    'AUTH_COOKIE_SECURE': False,
     'AUTH_COOKIE_HTTP_ONLY': True,  
     'AUTH_COOKIE_PATH': '/',  
-    'AUTH_COOKIE_SAMESITE': 'Lax',
+    'AUTH_COOKIE_SAMESITE': 'None',
 }
 
 
@@ -272,9 +272,13 @@ CORS_ALLOW_ALL_ORIGINS = True
   #  "http://localhost:3000",  # Add your frontend URL here
    # "https://your-frontend-domain.com",
 #]
+# settings.py
+
 
 CORS_ALLOW_CREDENTIALS = True
-
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Adjust this to match your frontend origin
+]
 KAVENEGAR_API_KEY = config('KAVENEGAR_API_KEY')
 OWNER_PHONE_NUMBER = '1234567890'
 
@@ -285,3 +289,5 @@ SANDBOX = config('SANDBOX', cast=bool)  # Set to False in production
 
 # Merchant ID for Zarinpal
 MERCHANT = config('MERCHANT')
+TIME_ZONE = 'Asia/Tehran'
+USE_TZ = True

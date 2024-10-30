@@ -54,25 +54,20 @@ class OrderViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             user = self.request.user
             cart = Cart.objects.get(user=user)
+
             if not cart.cartitem_set.exists():
                 raise ValidationError("Your cart is empty. Add items to your cart before placing an order.")
-            
-            order = serializer.save(user=user)
-            total_price = 0
 
-            for cart_item in cart.cartitem_set.all():
-                product = cart_item.product
-                quantity = cart_item.quantity
-                if product.stock < quantity:
-                    raise ValidationError(f"Not enough stock for {product.name}.")
-                product.stock -= quantity
-                product.sales_count += quantity
-                product.save()
-                OrderItem.objects.create(order=order, product=product, quantity=quantity)
-                total_price += product.price * quantity
+            # Prepare order_items data from the cart for the serializer
+            order_items_data = [
+                {'product': cart_item.product, 'quantity': cart_item.quantity}
+                for cart_item in cart.cartitem_set.all()
+            ]
 
-            order.total_price = total_price
-            order.save()
+            # Pass the order items to the serializer
+            order = serializer.save(user=user, order_items=order_items_data)
+
+            # Clear the cart after the order is saved
             cart.cartitem_set.all().delete()
 
 
@@ -127,30 +122,41 @@ class CartViewSet(viewsets.ViewSet):
     def add_to_cart(self, request):
         user = request.user
         product_id = request.data.get('product_id')
-        quantity = request.data.get('quantity', 1)
-
-        if quantity <= 0:
-            return Response({"detail": "Quantity must be a positive integer."}, status=status.HTTP_400_BAD_REQUEST)
+        quantity = int(request.data.get('quantity', 1))
 
         try:
             product = Product.objects.get(id=product_id)
         except Product.DoesNotExist:
             return Response({"detail": "Product not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        if quantity <= 0:
+            return Response({"detail": "Quantity must be a positive integer."}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             with transaction.atomic():
                 cart = self.get_cart(user)
                 cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product)
+
+                if product.stock >= quantity:
+                    cart_item.is_preordered = False
+                    cart_item.price = product.price_after_discount
+                elif product.pre_order_available:
+                    cart_item.is_preordered = True
+                    cart_item.price = product.pre_order_price
+                else:
+                    raise ValidationError(f"Not enough stock for {product.name}, and pre-order is not available.")
+
                 cart_item.quantity += quantity
                 cart_item.save()
+
                 cart_serializer = self.get_serializer(cart)
                 return Response({
-                    "detail": "Product added to cart.",
+                    "detail": "Product added to cart." if product.stock >= quantity else "Product added as pre-order.",
                     "cart": cart_serializer.data
                 }, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+    
     @action(detail=False, methods=['get'], url_path='view-item/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
     def retrieve_cart_item(self, request, product_id=None):
         user = request.user  
@@ -185,7 +191,7 @@ class CartViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['delete'], url_path='remove-item/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
     def delete_cart_item(self, request, product_id=None):
-        user = request.user  # Retrieve the user from the token
+        user = request.user  
         try:
             cart_item = CartItem.objects.get(cart__user=user, product_id=product_id)
             cart = cart_item.cart

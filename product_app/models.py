@@ -41,9 +41,12 @@ class Product(models.Model):
         default=0
     )
     price_after_discount = models.PositiveIntegerField(null=True, blank=True)
-    stock = models.PositiveIntegerField(default=0)
+    stock = models.IntegerField(default=0)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     subcategory = models.ForeignKey(Subcategory, on_delete=models.CASCADE, blank=True, null=True)
+
+    pre_order_price=models.PositiveIntegerField(null=True, blank=True)
+    pre_order_available = models.BooleanField(default=True)
 
     image1 = models.ImageField(upload_to='products/images/', blank=True, null=True)
     image2 = models.ImageField(upload_to='products/images/', blank=True, null=True)

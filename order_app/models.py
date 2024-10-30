@@ -1,6 +1,8 @@
 from django.db import models
 from user_app.models import User
 from product_app.models import Product
+from django.utils import timezone
+from datetime import timedelta
 
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -38,7 +40,8 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='order_items', on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
-
+    is_preordered = models.BooleanField(default=False)
+    
 class Cart(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -47,7 +50,8 @@ class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=0)
-
+    is_preordered=models.BooleanField(default=False)
+    price = models.PositiveIntegerField(default=0)
 
 class Wishlist(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='wishlist')
@@ -65,3 +69,18 @@ class WishlistItem(models.Model):
 
     def __str__(self):
         return f"{self.product.name} in {self.wishlist.user.username}'s Wishlist"
+    
+class PreOrderQueue(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    product = models.ForeignKey('product_app.Product', on_delete=models.CASCADE, related_name='preorder_queue')
+    order_date = models.DateTimeField(auto_now_add=True)
+    position = models.PositiveIntegerField()
+    reservation_expires_at = models.DateTimeField(null=True, blank=True)  
+    reservation_status = models.CharField(max_length=20, default="waiting")
+    
+    class Meta:
+        unique_together = ('user', 'product')
+        ordering = ['position']
+
+    def __str__(self):
+        return f"User {self.user.id} in queue for Product {self.product.id} at position {self.position}"
