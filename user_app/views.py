@@ -101,7 +101,7 @@ class CheckOTP(APIView):
                     response.set_cookie(
                         key=settings.SIMPLE_JWT['AUTH_COOKIE'],
                         value=access_token,
-                        httponly=True,
+                        httponly=False,
                         secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
                         samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
                         expires=access_token_expiration
@@ -109,7 +109,7 @@ class CheckOTP(APIView):
                     response.set_cookie(
                         key='refresh_token',
                         value=str(refresh),
-                        httponly=True,
+                        httponly=False,
                         secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
                         samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
                         expires=refresh_exp
