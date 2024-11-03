@@ -100,7 +100,7 @@ class SubcategoryViewSet(viewsets.ModelViewSet):
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminUser]
+    permission_classes = [IsAuthenticatedOrReadOnly]
     authentication_classes = [JWTAuthentication]
     parser_classes = [MultiPartParser, JSONParser]
     

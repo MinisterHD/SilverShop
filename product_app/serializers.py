@@ -22,11 +22,15 @@ class ProductSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False
     )
-
+    images_list = serializers.SerializerMethodField()
     class Meta:
         model = Product
         fields = '__all__'
         read_only_fields = ["id", "created_at", "updated_at"]
+
+    def get_images_list(self, obj):
+        request = self.context.get('request')
+        return obj.get_image_urls(request)
 
     def create(self, validated_data):
         images = validated_data.pop('images', None)

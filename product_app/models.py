@@ -60,6 +60,19 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+    
+    
+    def get_image_urls(self, request):
+        urls = []
+        if self.image1:
+            urls.append(request.build_absolute_uri(self.image1.url))
+        if self.image2:
+            urls.append(request.build_absolute_uri(self.image2.url))
+        if self.image3:
+            urls.append(request.build_absolute_uri(self.image3.url))
+        if self.image4:
+            urls.append(request.build_absolute_uri(self.image4.url))
+        return urls
 
 class Comment(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='comments', null=False, blank=False)

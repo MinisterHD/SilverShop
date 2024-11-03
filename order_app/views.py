@@ -14,6 +14,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from django.utils import timezone
 logger = logging.getLogger(__name__)
+from .utils import notify_user
 
 
 #Order
@@ -328,3 +329,23 @@ class WishlistViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error removing product {product_id} from wishlist for user {user_id}: {str(e)}")
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+#PreOrder Payment
+class PreOrderViewSet(viewsets.ViewSet):
+    @action(detail=True, methods=['post'], url_path='pay-remaining')
+    def pay_remaining_amount(self, request, pre_order_id=None):
+        user = request.user
+        try:
+            pre_order = PreOrderQueue.objects.get(id=pre_order_id, user=user)
+        except PreOrderQueue.DoesNotExist:
+            return Response({"detail": "Pre-order not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        remaining_amount = pre_order.total_amount_due - pre_order.paid_amount
+
+        pre_order.paid_amount += remaining_amount
+        pre_order.update_payment_status()
+
+        return Response({"detail": "Remaining amount paid successfully."}, status=status.HTTP_200_OK)
+    
