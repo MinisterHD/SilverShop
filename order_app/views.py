@@ -21,7 +21,7 @@ from .utils import notify_user
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrAdmin]
+    permission_classes = [IsOwnerOrAdmin]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
     ordering_fields = ['delivery_date', 'order_date']
@@ -30,22 +30,33 @@ class OrderViewSet(viewsets.ModelViewSet):
     def get_serializer_context(self):
         return {'request': self.request}
 
+
     def get_queryset(self):
+        user = self.request.user
         queryset = super().get_queryset().prefetch_related('order_items__product')
+
+        
+        if not user.is_staff:
+            queryset = queryset.filter(user=user)
+
         params = self.request.query_params
 
+        
         user_id = params.get('user_id')
         if user_id:
             queryset = queryset.filter(user_id=user_id)
 
+        
         delivery_status = params.get('delivery_status')
         if delivery_status:
             queryset = queryset.filter(delivery_status=delivery_status)
 
+        
         order_date = params.get('order_date')
         if order_date:
             queryset = queryset.filter(order_date=order_date)
 
+        
         ordering = params.get('ordering', '-order_date')
         queryset = queryset.order_by(ordering)
 
@@ -59,16 +70,14 @@ class OrderViewSet(viewsets.ModelViewSet):
             if not cart.cartitem_set.exists():
                 raise ValidationError("Your cart is empty. Add items to your cart before placing an order.")
 
-            # Prepare order_items data from the cart for the serializer
             order_items_data = [
                 {'product': cart_item.product, 'quantity': cart_item.quantity}
                 for cart_item in cart.cartitem_set.all()
             ]
 
-            # Pass the order items to the serializer
             order = serializer.save(user=user, order_items=order_items_data)
 
-            # Clear the cart after the order is saved
+
             cart.cartitem_set.all().delete()
 
 
