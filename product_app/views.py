@@ -18,7 +18,7 @@ from django.db import transaction
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminUser]
+    permission_classes = [IsAdminOrReadOnly]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
 
@@ -100,13 +100,17 @@ class SubcategoryViewSet(viewsets.ModelViewSet):
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdminOrReadOnly]
     authentication_classes = [JWTAuthentication]
     parser_classes = [MultiPartParser, JSONParser]
     
     search_fields = ['name']
     lookup_url_kwarg = 'product_id'
-
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
     @transaction.atomic
     def create(self, request, *args, **kwargs):
         try:
@@ -315,6 +319,7 @@ class RatingViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Rating not found.'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': f'An error occurred while deleting the rating: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
+
 
 class TopSellerAPIView(ListAPIView):
     queryset = Product.objects.all()

@@ -30,6 +30,8 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def get_images_list(self, obj):
         request = self.context.get('request')
+        if not request:
+            return []
         return obj.get_image_urls(request)
 
     def create(self, validated_data):
@@ -48,7 +50,6 @@ class ProductSerializer(serializers.ModelSerializer):
 
         product.save()
         return product
-
     def update(self, instance, validated_data):
         images = validated_data.get('images', None)
         if images and isinstance(images, list):

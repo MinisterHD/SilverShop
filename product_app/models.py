@@ -63,6 +63,8 @@ class Product(models.Model):
     
     
     def get_image_urls(self, request):
+        if not request:
+            return []
         urls = []
         if self.image1:
             urls.append(request.build_absolute_uri(self.image1.url))

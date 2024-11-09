@@ -84,6 +84,7 @@ class OrderSerializer(serializers.ModelSerializer):
         representation['regular_items'] = regular_items
         return representation
 
+
 class CartItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
     price = serializers.SerializerMethodField()
@@ -136,12 +137,14 @@ class CartSerializer(serializers.ModelSerializer):
         
         return representation
 
+
 class WishlistItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)  
 
     class Meta:
         model = WishlistItem
         fields = ['id', 'product', 'added_at']
+
 
 class WishlistSerializer(serializers.ModelSerializer):
     items = WishlistItemSerializer(many=True, read_only=True)
