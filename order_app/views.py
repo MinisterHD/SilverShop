@@ -232,7 +232,7 @@ class CartViewSet(viewsets.ViewSet):
 class WishlistViewSet(viewsets.ModelViewSet):
     queryset = Wishlist.objects.all()
     serializer_class = WishlistSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrAdmin]
+    permission_classes = [ IsOwnerOrAdmin]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
 
@@ -265,20 +265,33 @@ class WishlistViewSet(viewsets.ModelViewSet):
 
         try:
             product = get_object_or_404(Product, id=product_id)
-            wishlist, created = Wishlist.objects.get_or_create(user=user)
-            wishlist_item, created = WishlistItem.objects.get_or_create(wishlist=wishlist, product=product)
+            
+            # Use get_or_create with defaults
+            wishlist, _ = Wishlist.objects.get_or_create(user=user)
+            
+            # Use get_or_create for wishlist item
+            wishlist_item, created = WishlistItem.objects.get_or_create(
+                wishlist=wishlist,
+                product=product,
+                defaults={'added_at': timezone.now()}
+            )
+
             if created:
-                return Response({"detail": "Product added to wishlist."}, status=status.HTTP_201_CREATED)
-            else:
-                return Response({"detail": "Product is already in the wishlist."}, status=status.HTTP_200_OK)
+                return Response({
+                    "detail": "Product added to wishlist.",
+                    "wishlist_item_id": wishlist_item.id
+                }, status=status.HTTP_201_CREATED)
+            
+            return Response({
+                "detail": "Product is already in the wishlist.",
+                "wishlist_item_id": wishlist_item.id
+            }, status=status.HTTP_200_OK)
+            
         except Product.DoesNotExist:
             return Response({"detail": "Product not found."}, status=status.HTTP_404_NOT_FOUND)
-        except WishlistItem.MultipleObjectsReturned:
-            return Response({"detail": "Product is already in the wishlist."}, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Error adding product {product_id} to wishlist for user {user.id}: {str(e)}")
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
     @action(detail=False, methods=['delete'], url_path='remove/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
     def remove_from_wishlist(self, request, product_id=None):
         user = request.user 
