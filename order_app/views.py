@@ -110,7 +110,6 @@ class OrderViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 #Cart
 class CartViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
@@ -129,7 +128,6 @@ class CartViewSet(viewsets.ViewSet):
         kwargs['context'] = self.get_serializer_context()
         return serializer_class(*args, **kwargs)
 
-    
     @action(detail=False, methods=['post'], url_path='add', permission_classes=[IsAuthenticated])
     def add_to_cart(self, request):
         user = request.user
@@ -177,7 +175,37 @@ class CartViewSet(viewsets.ViewSet):
                 }, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
+    @action(detail=False, methods=['post'], url_path='decrease-item', permission_classes=[IsAuthenticated])
+    def decrease_cart_item(self, request):
+        user = request.user
+        product_id = request.data.get('product_id')
+
+        if not product_id:
+            return Response({"detail": "Product ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            cart_item = CartItem.objects.get(cart__user=user, product_id=product_id)
+            if cart_item.quantity > 1:
+                cart_item.quantity -= 1
+                cart_item.save()
+                cart_serializer = self.get_serializer(cart_item.cart)
+                return Response({
+                    "detail": "Cart item quantity decreased.",
+                    "cart": cart_serializer.data
+                }, status=status.HTTP_200_OK)
+            else:
+                cart_item.delete()
+                cart_serializer = self.get_serializer(cart_item.cart)
+                return Response({
+                    "detail": "Cart item removed from cart.",
+                    "cart": cart_serializer.data
+                }, status=status.HTTP_200_OK)
+        except CartItem.DoesNotExist:
+            return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=False, methods=['get'], url_path='view-item/(?P<product_id>[^/.]+)', permission_classes=[IsAuthenticated])
     def retrieve_cart_item(self, request, product_id=None):
         user = request.user  
@@ -238,7 +266,6 @@ class CartViewSet(viewsets.ViewSet):
             return Response({"detail": "Cart not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 #WishList
 class WishlistViewSet(viewsets.ModelViewSet):
