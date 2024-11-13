@@ -110,6 +110,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 #Cart
 class CartViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
@@ -128,6 +129,7 @@ class CartViewSet(viewsets.ViewSet):
         kwargs['context'] = self.get_serializer_context()
         return serializer_class(*args, **kwargs)
 
+    
     @action(detail=False, methods=['post'], url_path='add', permission_classes=[IsAuthenticated])
     def add_to_cart(self, request):
         user = request.user
@@ -150,13 +152,22 @@ class CartViewSet(viewsets.ViewSet):
                 if product.stock >= quantity:
                     cart_item.is_preordered = False
                     cart_item.price = product.price_after_discount
-                elif product.pre_order_available:
-                    cart_item.is_preordered = True
-                    cart_item.price = product.pre_order_price
+                    cart_item.quantity += quantity
                 else:
-                    raise ValidationError(f"Not enough stock for {product.name}, and pre-order is not available.")
+                    if product.stock > 0:
+                        cart_item.is_preordered = False
+                        cart_item.price = product.price_after_discount
+                        cart_item.quantity += product.stock
+                        quantity -= product.stock
 
-                cart_item.quantity += quantity
+                    if product.pre_order_available:
+                        pre_order_item, created = CartItem.objects.get_or_create(cart=cart, product=product, is_preordered=True)
+                        pre_order_item.price = product.pre_order_price
+                        pre_order_item.quantity += quantity
+                        pre_order_item.save()
+                    else:
+                        raise ValidationError(f"Not enough stock for {product.name}, and pre-order is not available.")
+
                 cart_item.save()
 
                 cart_serializer = self.get_serializer(cart)
@@ -227,6 +238,7 @@ class CartViewSet(viewsets.ViewSet):
             return Response({"detail": "Cart not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 #WishList
 class WishlistViewSet(viewsets.ModelViewSet):
